@@ -1,0 +1,3 @@
+./data/*
+# object files (.o) and output (executible) files (.out)
+*.o*

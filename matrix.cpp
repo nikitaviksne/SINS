@@ -1,5 +1,5 @@
-#include<std.h>
 #include <matrix.h>
+#include <std.h>
 
 void MulMatrD(double *A, double *B, double *C, int size1, int size2, int size3)
 {

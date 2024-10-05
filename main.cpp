@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <std.h>
 #include <matrix.h>
 #include <math.h>
+#include <std.h>
 
 int main()
 {
@@ -27,7 +27,7 @@ int main()
 	double Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
 	// Необходимые массивы для решение навигационной задачи
-	double Ab[3]={0}; // Ускорения в связанных осях
+	double Ab[3] = {0}; // Ускорения в связанных осях
 	double Ao[3] = {0}; // Ускорения в географических осях
 	double Omb[3] = {0}; // Угловые скорости в связанных осях
 	double Omo[3] = {0}; // Угловые скорости в географических осях
@@ -38,7 +38,7 @@ int main()
 	double StdOmb[3] = {0};
 	double Cbn[9] = {0};
 	// массивы для выходных значений
-	double V[3] = {100*sin(270*deg2rad), 100*cos(270*deg2rad), 0}; // линейные скорости E; N; Up
+	double V[3] = {100*sin(50*deg2rad), 100*cos(50*deg2rad), 0}; // линейные скорости E; N; Up
 	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	double Orientation[3] = {0}; // Углы ориентации
 	double Rlambda;
@@ -46,7 +46,7 @@ int main()
 	double Rphi;
 	Rphi = R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 	// Чтение из файла ускорений и угловых скоростей
-	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
+	FILE* file=fopen("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", "rt");
 	while(true)
 	{
 		// int res = fscanf(file, "%f;%f;%f;%f;%f;%f;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2]);
@@ -91,7 +91,8 @@ int main()
 				Roll = - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
 				Pitch = atan2(Cbn[index(3, 2, 1)], c0);
 				// вычисление ошибок выставки
-				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2] + MeanAb[0]*MeanAb[0]);
+				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2]
+				+ MeanAb[0]*MeanAb[0]);
 				DeltaPitch = (StdAb[1])/sqrt(g*g - MeanAb[1]*MeanAb[1]);
 				double DeltaWn[3];
 				MulMatrD(Cbn, StdOmb, DeltaWn,3,3,1); // проекция дрейфов гироскопов на географические оси
