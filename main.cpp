@@ -15,14 +15,21 @@ int main()
 	const double U = 7.27220521664304e-05;
 	const double rad2deg = 180/pi; // из градусов в час в радианы в секунду
 	const double deg2rad = 1/rad2deg;
+	/*
+	 * Начальные значения.
+	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
+	 */
+	double Vabs = 100; // Модуль линейной скорости
+	double H0 = 55*deg2rad; // Начальный угол курса в радианах
+
 	int freq = 100; // частота измерений с инерциальных датчиков
 	int t_nav = 90*60; // время работы нав алгоритма в секундах
 	int t_alignment = 5*60*freq; // время выставки в тактах
 
 	int cur_time = 0; // текущий такт!! измерения
 	//Необходимое для выставки
-	double phi0 = 55*deg2rad;
-	double lambda0 = 33*deg2rad;
+	double phi0 = (double) 0*deg2rad;
+	double lambda0 = (double) 33*deg2rad;
 	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
 	double Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
@@ -38,13 +45,13 @@ int main()
 	double StdOmb[3] = {0};
 	double Cbn[9] = {0};
 	// массивы для выходных значений
-	double V[3] = {100*sin(50*deg2rad), 100*cos(50*deg2rad), 0}; // линейные скорости E; N; Up
+	double V[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	double Orientation[3] = {0}; // Углы ориентации
 	double Rlambda;
-	Rlambda = R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	double Rphi;
-	Rphi = R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 	// Чтение из файла ускорений и угловых скоростей
 	FILE* file=fopen("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", "rt");
 	while(true)
@@ -53,7 +60,7 @@ int main()
 		int res = fscanf(file, "%lf%lf%lf%lf%lf%lf", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2]);
 		if (res!=6)
 		{
-			printf("Check error of End of file\n");
+			printf("Check error at %d iteration\n", cur_time);
 			break;
 		}
 		// этап выставки
@@ -85,11 +92,11 @@ int main()
 		{
 			if (AlignmentContinue)
 			{
-				double c0 = sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+				double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
 				// Вычисление углов ориентации
-				Heading = atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-				Roll = - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-				Pitch = atan2(Cbn[index(3, 2, 1)], c0);
+				Heading = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+				Roll = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+				Pitch = (double) atan2(Cbn[index(3, 2, 1)], c0);
 				// вычисление ошибок выставки
 				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2]
 				+ MeanAb[0]*MeanAb[0]);
@@ -107,12 +114,12 @@ int main()
 			}
 		}
 #if 1
-		Omo[0] = -V[1]/(Rphi + Coordinates[2]);
-		Omo[1] = V[0]/(Rlambda + Coordinates[2]) + U*cos(Coordinates[0]);
-		Omo[2] = V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0]);
-		Coordinates[0] += (V[1]/(Rphi + Coordinates[2]))/freq;
-		Coordinates[1] += (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
-		Coordinates[2] += (V[2])/freq;
+		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);
+		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]) + U*cos(Coordinates[0]);
+		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0]);
+		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2]))/freq;
+		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])))/freq; //*cos(Coordinates[0])
+		Coordinates[2] += ((double) V[2])/freq;
 		// Решение уравнения Пуассона
 		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
 		double EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
@@ -124,19 +131,19 @@ int main()
 		for(int i=0; i<9; ++i)
 			Cbn[i] += (CEigWb[i] - EigWoC[i])/freq;
 		// вычисление углов ориентации через МНК (как в выставке)
-		Orientation[0] = atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-		Orientation[1] = - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-		double c0 = sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
-		Orientation[2] = atan2(Cbn[index(3, 2, 1)], c0);
+		Orientation[0] = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+		Orientation[1] = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+		double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+		Orientation[2] = (double) atan2(Cbn[index(3, 2, 1)], c0);
 
 		// решение задачи навигации
 		MulMatrD(Cbn, Ab, Ao,3,3,1); // перепроектирование из связаных осей в навигационные
 		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi))/freq; //Vup
-		V[0] += (Ao[0] + (U*sin(Coordinates[0]) + Omo[2]) * V[1] - V[2] *(U * cos(Coordinates[0]) + Omo[1]))/freq;// Ve
-		V[1] += (Ao[1] - (U*sin(Coordinates[0]) + Omo[2]) * V[0] + V[2] * Omo[0])/freq; //Vn
+		V[0] += (double) (Ao[0] + (U*sin(Coordinates[0]) + Omo[2]) * V[1] - V[2] *(U * cos(Coordinates[0]) + Omo[1]))/freq;// Ve
+		V[1] += (double) (Ao[1] - (U*sin(Coordinates[0]) + Omo[2]) * V[0] + V[2] * Omo[0])/freq; //Vn
 
-		Rlambda = R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-		Rphi = R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
 		// инкремент тактов
 		++cur_time;
@@ -165,18 +172,19 @@ int main()
 			// Навигационные параметры
 			// Скорости
 			for(int i=0; i<3; ++i)
-				fprintf(navig_res, "%e;", V[i]);
+				fprintf(navig_res, "%.10e;", V[i]);
 			// Координаты
 			for(int i=0; i<3; ++i)
-				fprintf(navig_res, "%e;", Coordinates[i]);
+				fprintf(navig_res, "%.10e;", Coordinates[i]);
 			// Углы оориентации
 			for(int i=0; i<3; ++i)
-				fprintf(navig_res, "%e;", Orientation[i]);
+				fprintf(navig_res, "%.10e;", Orientation[i]);
 
 			fprintf(navig_res, "\n");
 		}
 #endif
 	}
+	printf("File end\n");
 	//getc(stdin);
 	return 0;
 }
