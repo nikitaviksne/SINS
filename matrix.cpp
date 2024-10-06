@@ -1,4 +1,3 @@
-#include <matrix.h>
 #include <std.h>
 
 void MulMatrD(double *A, double *B, double *C, int size1, int size2, int size3)
@@ -16,8 +15,8 @@ void MulMatrD(double *A, double *B, double *C, int size1, int size2, int size3)
 				double a = A[index(size2, i, k)];
 				double b = B[index(size3, k, j)];
 #endif
-				sum += A[index(size2, i, k)] * (B[index(size3, k, j)]);
+				sum += (double) A[index(size2, i, k)] * (B[index(size3, k, j)]);
 			}
-			C[index(size3, i, j)] = sum;
+			C[index(size3, i, j)] = (double) sum;
 		}
 }

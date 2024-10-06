@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <matrix.h>
+#if 0
 #include <math.h>
+#endif
 #include <std.h>
+#include <cmath>
 
 int main()
 {
@@ -20,7 +23,7 @@ int main()
 	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
 	 */
 	double Vabs = 100; // Модуль линейной скорости
-	double H0 = 55*deg2rad; // Начальный угол курса в радианах
+	double H0 = 90*deg2rad; // Начальный угол курса в радианах
 
 	int freq = 100; // частота измерений с инерциальных датчиков
 	int t_nav = 90*60; // время работы нав алгоритма в секундах
@@ -28,7 +31,7 @@ int main()
 
 	int cur_time = 0; // текущий такт!! измерения
 	//Необходимое для выставки
-	double phi0 = (double) 0*deg2rad;
+	double phi0 = (double) 55*deg2rad;
 	double lambda0 = (double) 33*deg2rad;
 	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
 	double Heading = 0, Roll = 0, Pitch = 0;
@@ -115,14 +118,15 @@ int main()
 		}
 #if 1
 		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);
-		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]) + U*cos(Coordinates[0]);
-		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0]);
+		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);
+		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);
+		double omo[3] = {Omo[0], Omo[1] + U*cos(Coordinates[0]), Omo[2] + U*sin(Coordinates[0])}; // абсолютные угловые скорости
 		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2]))/freq;
-		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])))/freq; //*cos(Coordinates[0])
+		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq; //
 		Coordinates[2] += ((double) V[2])/freq;
 		// Решение уравнения Пуассона
 		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
-		double EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
+		double EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
 		double CEigWb[9]; // первое слагаемое уравнения Пуассона
 		double EigWoC[9]; // второе слагаемое уравнения Пуассона
  		MulMatrD(Cbn, EigWb, CEigWb,3,3,3);
@@ -139,8 +143,16 @@ int main()
 		// решение задачи навигации
 		MulMatrD(Cbn, Ab, Ao,3,3,1); // перепроектирование из связаных осей в навигационные
 		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi))/freq; //Vup
-		V[0] += (double) (Ao[0] + (U*sin(Coordinates[0]) + Omo[2]) * V[1] - V[2] *(U * cos(Coordinates[0]) + Omo[1]))/freq;// Ve
-		V[1] += (double) (Ao[1] - (U*sin(Coordinates[0]) + Omo[2]) * V[0] + V[2] * Omo[0])/freq; //Vn
+#if 1
+		//Кориолисовы добавки
+		double aCoriolis[3] = {0};
+		aCoriolis[0] = omo[1]*V[2] - omo[2]*V[1] + U*cos(Coordinates[0])*V[2] - U*sin(Coordinates[0])*V[1];
+		aCoriolis[1] = -omo[0]*V[2] + omo[2]*V[0] + U*sin(Coordinates[0])*V[0];
+		aCoriolis[2] = omo[0]*V[1] - omo[1]*V[0] - U*cos(Coordinates[0])*V[0];
+
+		V[0] += (double) (Ao[0] - aCoriolis[0])/freq;// Ve
+		V[1] += (double) (Ao[1] - aCoriolis[1])/freq; //Vn
+#endif
 
 		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
