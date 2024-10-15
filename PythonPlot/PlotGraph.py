@@ -49,4 +49,21 @@ fig2_ax3.legend(loc="best")
 fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"]),round), label="Тангаж");
 fig2_ax3.grid(True)
 
+'''Ошибки по координатам'''
+fig3, (fig3_ax1, fig3_ax2) = plt.subplots(1, 2)
+# Восточное направление
+fig3_ax1.set_title("Восточное направление");
+fig3_ax1.set_xlabel("мин")
+fig3_ax1.set_ylabel("м")
+fig3_ax1.legend(loc="best")
+fig3_ax1.plot(time, np.round(data["d_E"], round), label="dE");
+fig3_ax1.grid(True)
+# Северное направление
+fig3_ax2.set_title("Северное направление");
+fig3_ax2.set_xlabel("мин")
+fig3_ax2.set_ylabel("м")
+fig3_ax2.legend(loc="best")
+fig3_ax2.plot(time, np.round(data["d_N"],round), label="dN");
+fig3_ax2.grid(True)
+
 plt.show()

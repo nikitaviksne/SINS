@@ -2,6 +2,6 @@
     "version":"0.1.0",
     "command": "g++",
     "isShelCommand":true,
-    "args":["-g", "-I", "${workspaceRoot}/include", "main.cpp", "matrix.cpp", "-o", "a.out"],
+    "args":["-I", "${workspaceRoot}/include", "-I", "${workspaceRoot}/", "main.cpp", "matrix.cpp", "-g", "-o", "a.out"],
     "showOutput": "always"
 }

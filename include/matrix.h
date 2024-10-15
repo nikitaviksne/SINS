@@ -1,6 +1,6 @@
 #ifndef MATRIXH
 #define MATRIXH
 
-void MulMatrD(double *, double *, double *, int , int , int);
+void MulMatrD(float *, float *, float *, int , int , int);
 
 #endif
