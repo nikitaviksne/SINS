@@ -1,77 +1,122 @@
+#define _USE_MATH_DEFINES
 #include <stdio.h>
-#include <matrix.h>
+#include "matrix.h"
 #if 0
 #include <math.h>
 #endif
-#include <std.h>
+#include "std.h"
 #include <cmath>
+#include "mathematics.h"
 
 int main()
 {
 	//инициализация необходимых переменных и констант
-	const float g = 9.81;
-	const float a = 6378245;
-	const float b = 6356856;
-	const float e=sqrt(1 - b*b/a/a);
-	const float R=6400e3;
-	const float pi=3.141592653589793;
-	const float U = 7.27220521664304e-05;
-	const float rad2deg = 180/pi; // из градусов в час в радианы в секунду
-	const float deg2rad = 1/rad2deg;
-	/*
-	 * Начальные значения.
-	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
-	 */
-	float Vabs = 300; // Модуль линейной скорости
-	float H0 = 50*deg2rad; // Начальный угол курса в радианах
+	const double g = 9.81;
+	const double a = 6378245;
+	const double b = 6356856;
+	const double e=sqrt(1 - b*b/a/a);
+	const double R=6400e3;
+	const double pi=3.141592653589793;
+	const double U = 7.27220521664304e-05;
+	const double rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
+	const double deg2rad = 1./rad2deg;
 
 	int freq = 100; // частота измерений с инерциальных датчиков
+	double h {0.01}; //период дискретизации
 	int t_nav = 90*60; // время работы нав алгоритма в секундах
 	int t_alignment = 5*60*freq; // время выставки в тактах
 
 	int cur_time = 0; // текущий такт!! измерения
+	/*
+	 * Начальные значения.
+	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
+	*/
+	// Для моделирования показаний Ч.Э.
+	double H0 = (double) (50)*deg2rad;
+	double P0 = (double) (0)*deg2rad;
+	double R0 = (double) (0)*deg2rad;
+	double Vabs = 300;
+	double Cnb[9];
+	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
-	float phi0 = (float) 55*deg2rad;
-	float lambda0 = (float) 33*deg2rad;
-	float DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
-	float Heading = 0, Roll = 0, Pitch = 0;
+	double phi0 = (double) 55*deg2rad;
+	double lambda0 = (double) 33*deg2rad;
+	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
+	double Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
 	// Необходимые массивы для решение навигационной задачи
-	float Ab[3] = {0}; // Ускорения в связанных осях
-	float BiasAb[3] = {0}; //Смещение нулей акселерометров
-	float BiasOmb[3] = {0}; //Смещение нулей гироскопов
-	float RandAb[3] = {0}; //Случайные погрешности акселерометров
-	float RandOmb[3] = {0}; //Случайные погрешности гироскопов
-	float Ao[3] = {0}; // Ускорения в географических осях
-	float Omb[3] = {0}; // Угловые скорости в связанных осях
-	float Omo[3] = {0}; // Угловые скорости в географических осях
-	//float Oms[3] = {0}; // угловые скорости от линейного движения + Земля
-	float MeanAb[3] = {0};
-	float MeanOmb[3] = {0};
-	float StdAb[3] = {0};
-	float StdOmb[3] = {0};
-	float Cbn[9] = {0};
+	double Ab[3] = {0}; // Ускорения в связанных осях
+	double BiasAb[3] = {0}; //Смещение нулей акселерометров
+	double BiasOmb[3] = {0}; //Смещение нулей гироскопов
+	double RandAb[3] = {0}; //Случайные погрешности акселерометров
+	double RandOmb[3] = {0}; //Случайные погрешности гироскопов
+	double Ao[3] = {0}; // Ускорения в географических осях
+	double Omb[3] = {0}; // Угловые скорости в связанных осях
+	double Omo[3] = {0}; // Угловые скорости в географических осях
+	//double Oms[3] = {0}; // угловые скорости от линейного движения + Земля
+	double MeanAb[3] = {0};
+	double MeanOmb[3] = {0};
+	double StdAb[3] = {0};
+	double StdOmb[3] = {0};
+	double Cbn[9] = {0};
 	// массивы для выходных значений
-	float V[3] = {(float) Vabs*sin(H0), (float) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
-	float Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
-	float Orientation[3] = {0}; // Углы ориентации
-	float CoordErr[2] = {0}; // Ошибки по координатам в метрах
-	float Rlambda;
-	Rlambda = (float) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-	float Rphi;
-	Rphi = (float) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+	double V[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
+	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
+	double Orientation[3] = {0}; // Углы ориентации
+	double CoordErr[2] = {0}; // Ошибки по координатам в метрах
+	double Rlambda;
+	Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	double Rphi;
+	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+
+	bool AllowBiasAcc = false;
+	bool AllowBiasGyr = false;
+	bool AllowRandAcc = false;
+	bool AllowRandGyr = false;
 	// Чтение из файла ускорений и угловых скоростей
 	FILE* file=fopen("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", "rt");
-	fscanf(file, "%*[^\n]");
+	fscanf(file, "%*[^\n]"); //для файла, разделенного пробелами
+	//fscanf(file, "%*s;"); // для файла, разделенного точкой с запятой
+
+	double resultV[2] = {0};
+	double Verr1[2] = {0}; // ошибки интегрирования ускорений
+	double Verr2[2] = {0}; // ошибки накопления скоростей
+
 	while(true)
 	{
 		// int res = fscanf(file, "%f;%f;%f;%f;%f;%f;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2]);
-		int res = fscanf(file, "%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f%f", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[1], &BiasOmb[2], &BiasOmb[3], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], &RandOmb[2]);
+		//int res = fscanf(file, "%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
+		int res = fscanf(file, "%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
 		if (res!=18)
 		{
 			printf("Check error at %d iteration\n", cur_time);
 			break;
 		}
+#if 1
+		/*Генерирование (моделирование) показаний ч.э*/
+		if (cur_time <= t_alignment)
+		{
+			Ao[0] = 0.0; Ao[1] = 0.0; Ao[2] = g;
+			Omo[0] = 0;
+			Omo[1] = (double) U*cos(phi0);
+			Omo[2] = (double) U*sin(phi0);
+		}
+		else
+		{
+			Omo[0] = (double) -Vabs*cos(H0) / (Rphi + 0);
+			Omo[1] = (double) Vabs*sin(H0) / ((Rlambda + 0)) + (double) U*cos(phi0);
+			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (double) U*sin(phi0);
+			Ao[0] = 0.0;//(double) ( Omo[1]*0 -(double) Omo[2]*Vabs*cos(H0) + (double) U*cos(phi0)*0 - (double) U*sin(phi0)*Vabs*cos(H0));
+			Ao[1] = 0.0;//(double) (-Omo[0]*0 +(double) Omo[2]*Vabs*sin(H0) + (double) U*sin(phi0)*Vabs*sin(H0));
+			Ao[2] = g;
+			phi0 += (double) Vabs*cos(H0)/(R + 0) * h;
+		}
+		//printf("Cur_time = %d\n", cur_time);
+		//printf("Modelled Ao = [%.20f; %.20f; %.20f]\n", Ao[0], Ao[1], Ao[2]);
+		MulMatrD(Cnb, Ao, Ab,3,3,1); // проекция ускорений на связанные оси
+		//printf("Modelled Ab = [%.20e; %.20e; %.20e]\n", Ab[0], Ab[1], Ab[2]);
+		MulMatrD(Cnb, Omo, Omb,3,3,1); // проекция угловых скоростей на связанные оси
+#endif
 		// этап выставки
 		if (cur_time <= t_alignment)
 		{
@@ -101,18 +146,18 @@ int main()
 		{
 			if (AlignmentContinue)
 			{
-				float c0 = (float) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+				double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
 				// Вычисление углов ориентации
-				Heading = (float) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-				Roll = (float) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-				Pitch = (float) atan2(Cbn[index(3, 2, 1)], c0);
+				Heading = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+				Roll = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+				Pitch = (double) atan2(Cbn[index(3, 2, 1)], c0);
 				// вычисление ошибок выставки
 				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2]
 				+ MeanAb[0]*MeanAb[0]);
 				DeltaPitch = (StdAb[1])/sqrt(g*g - MeanAb[1]*MeanAb[1]);
-				float DeltaWn[3];
+				double DeltaWn[3];
 				MulMatrD(Cbn, StdOmb, DeltaWn,3,3,1); // проекция дрейфов гироскопов на географические оси
-				float DeltaAn[3];
+				double DeltaAn[3];
 				MulMatrD(Cbn, StdAb, DeltaAn,3,3,1); // проекция дрейфов акселерометров на географические оси
 				DeltaHeading = - DeltaWn[0]/(U*cos(phi0)) + DeltaAn[0]/g*tan(phi0) - StdAb[2]/2/g*sin(2*Heading);
 				printf("Alignment\n");
@@ -123,48 +168,68 @@ int main()
 			}
 		}
 #if 1
-		Omo[0] = (float) -V[1]/(Rphi + Coordinates[2]);
-		Omo[1] = (float) V[0]/(Rlambda + Coordinates[2]);
-		Omo[2] = (float) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);
-		float omo[3] = {Omo[0], Omo[1] + U*cos(Coordinates[0]), Omo[2] + U*sin(Coordinates[0])}; // абсолютные угловые скорости
-		Coordinates[0] += (float) (V[1]/(Rphi + Coordinates[2]))/freq;
-		Coordinates[1] += (float) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq; //
-		Coordinates[2] += ((float) V[2])/freq;
+		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);
+		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);
+		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);
+		double omo[3] = {Omo[0], Omo[1] + U*cos(Coordinates[0]), Omo[2] + U*sin(Coordinates[0])}; // абсолютные угловые скорости
+		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h;
+		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; //
+		Coordinates[2] += ((double) V[2]) * h;
 		// Решение уравнения Пуассона
-		float EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
-		float EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
-		float CEigWb[9]; // первое слагаемое уравнения Пуассона
-		float EigWoC[9]; // второе слагаемое уравнения Пуассона
+		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
+		double EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
+		double CEigWb[9]; // первое слагаемое уравнения Пуассона
+		double EigWoC[9]; // второе слагаемое уравнения Пуассона
  		MulMatrD(Cbn, EigWb, CEigWb,3,3,3);
 		MulMatrD(EigWo, Cbn, EigWoC,3,3,3);
 
 		for(int i=0; i<9; ++i)
-			Cbn[i] += (CEigWb[i] - EigWoC[i])/freq;
+			Cbn[i] += (CEigWb[i] - EigWoC[i]) * h;
 		// вычисление углов ориентации через МНК (как в выставке)
-		Orientation[0] = (float) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-		Orientation[1] = (float) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-		float c0 = (float) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
-		Orientation[2] = (float) atan2(Cbn[index(3, 2, 1)], c0);
+		Orientation[0] = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+		Orientation[1] = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+		double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+		Orientation[2] = (double) atan2(Cbn[index(3, 2, 1)], c0);
 
 		// решение задачи навигации
 		MulMatrD(Cbn, Ab, Ao,3,3,1); // перепроектирование из связаных осей в навигационные
-		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi))/freq; //Vup
+		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi)) * h; //Vup
 #if 1
 		//Кориолисовы добавки
-		float aCoriolis[3] = {0};
+		double aCoriolis[3] = {0};
 		aCoriolis[0] = omo[1]*V[2] - omo[2]*V[1] + U*cos(Coordinates[0])*V[2] - U*sin(Coordinates[0])*V[1];
 		aCoriolis[1] = -omo[0]*V[2] + omo[2]*V[0] + U*sin(Coordinates[0])*V[0];
 		aCoriolis[2] = omo[0]*V[1] - omo[1]*V[0] - U*cos(Coordinates[0])*V[0];
 
-		V[0] += (float) (Ao[0] - aCoriolis[0])/freq;// Ve
-		V[1] += (float) (Ao[1] - aCoriolis[1])/freq; //Vn
+		double V_dot[2] = {(double) Ao[0], (double) Ao[1] };
 
-		CoordErr[0] +=(V[0] - Vabs*sin(H0))/freq;
-		CoordErr[1] +=(V[1] - Vabs*cos(H0))/freq;
+		/*
+		V[0] += (double) (Ao[0] - aCoriolis[0]) * h;// Ve
+		V[1] += (double) (Ao[1] - aCoriolis[1]) * h; //Vn
+
+		V[0] += (double) (Ao[0]) * h;// Ve
+		V[1] += (double) (Ao[1]) * h; //Vn
+		*/
+
+		// умножение
+		TwoProduct(Ao[0],h, V_dot[0], Verr2[0]);
+		TwoProduct(Ao[1],h, V_dot[1], Verr2[1]);
+		// компенсация ошибок интегрирования ускорений
+		TwoSum(Verr2[0], V_dot[0], V_dot[0], Verr2[0], false);
+		TwoSum(Verr2[1], V_dot[1], V_dot[1], Verr2[1], false);
+		// сложение скоростей с предыдущего такта и только что проинтегрированных ускорений (приращения скоростей). Оценка погрешности этого сложения
+		TwoSum(V_dot[0], V[0], V[0], Verr1[0], false);
+		TwoSum(V_dot[1], V[1],  V[1], Verr1[1], false);
+		//Компенсация погрешности сложения скоростей с пред. такта и приращения скоростей на тек. такте
+		TwoSum(Verr1[0], V[0], V[0], Verr1[0], false);
+		TwoSum(Verr1[1], V[1],  V[1], Verr1[1], false);
+
+		CoordErr[0] +=(V[0] - Vabs*sin(H0)) * h;
+		CoordErr[1] +=(V[1] - Vabs*cos(H0)) * h;
 #endif
 
-		Rlambda = (float) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-		Rphi = (float) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
 		// инкремент тактов
 		++cur_time;

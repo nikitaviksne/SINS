@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 data =pd.read_csv("~/InertialNavigation/data/Nav_res.csv", delimiter=";");
 
-time = np.linspace(0, data.iloc[:, 0].size - 1, data.iloc[:, 0].size) #в минутах /100/60
+time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
 
 round = 100
 

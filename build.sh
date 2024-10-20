@@ -1,7 +1,12 @@
 #!/bin/bash
 
-g++ -g -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/include -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/ -c ./matrix.cpp -O2 -lm -o matrix.o
+# matrix.cpp
+g++ -g -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/include -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/ -c ./matrix.cpp -O7 -lm -o matrix.o
 
-g++ -g -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/include -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/ -c ./main.cpp -O2 -lm -o main.o
+# mathematics.cpp
+g++ -g -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/include -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/ -c ./mathematics.cpp -O7 -lm -o mathematics.o
 
-g++ -g main.o matrix.o -O2 -o a.out 
+# main.cpp
+g++ -g -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/include -I /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/ -c ./main.cpp -O7 -lm -o main.o
+
+g++ -g main.o matrix.o mathematics.o -O7 -o a.out 
