@@ -1,8 +1,8 @@
-./data/*
+data/*
 # object files (.o) and output (executible) files (.out)
 *.o*
 # settings vscod
 *.vscode/*
 # dir tmp, but not /tmp/makefile
-*./tmp/*
+tmp/*
 !./tmp/Makefile
