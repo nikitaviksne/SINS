@@ -66,6 +66,11 @@ int main()
 	double Orientation[3] = {0}; // Углы ориентации
 	double CoordErr[2] = {0}; // Ошибки по координатам в метрах
 	double Rlambda;
+
+	double sqrEErr {0}; //Ошибка возведения e в квадрат 
+	double E2E {0};
+	TwoProduct(e, e, E2E, sqrEErr);
+	TwoSum(E2E, sqrEErr, E2E, sqrEErr, false);
 	Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	double Rphi;
 	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
@@ -104,9 +109,9 @@ int main()
 		}
 		else
 		{
-			Omo[0] = (double) -Vabs*cos(H0) / (Rphi + 0);
-			Omo[1] = (double) Vabs*sin(H0) / ((Rlambda + 0)) + (double) U*cos(phi0);
-			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (double) U*sin(phi0);
+			Omo[0] = (double) -Vabs*cos(H0) / (R + 0); //Rphi
+			Omo[1] = (double) Vabs*sin(H0) / ((R + 0)) + (double) U*cos(phi0); // Rlambda
+			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (R + 0) + (double) U*sin(phi0);// Rlambda
 			Ao[0] = 0.0;//(double) ( Omo[1]*0 -(double) Omo[2]*Vabs*cos(H0) + (double) U*cos(phi0)*0 - (double) U*sin(phi0)*Vabs*cos(H0));
 			Ao[1] = 0.0;//(double) (-Omo[0]*0 +(double) Omo[2]*Vabs*sin(H0) + (double) U*sin(phi0)*Vabs*sin(H0));
 			Ao[2] = g;
@@ -124,17 +129,17 @@ int main()
 			for(int i=0; i<3; ++i)
 			{
 				// применяем метод Уэлфорда
-				MeanAb[i] = MeanAb[i] + (Ab[i] - MeanAb[i]) / (cur_time+1);
-				StdAb[i] = (1 - 1/(cur_time + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(cur_time + 1);
-				MeanOmb[i] = MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (cur_time+1);
-				StdOmb[i] = (1 - 1/(cur_time + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(cur_time + 1);
+				MeanAb[i] = (double) MeanAb[i] + (Ab[i] - MeanAb[i]) / (cur_time+1);
+				StdAb[i] = (double) (1 - 1/(cur_time + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(cur_time + 1);
+				MeanOmb[i] = (double) MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (cur_time+1);
+				StdOmb[i] = (double) (1 - 1/(cur_time + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(cur_time + 1);
 			}
 			//Вычисление (ориентации) матрицы перехода Cbn = [c00, c01, c02, c10, c11, c12, c20, c21, c22]
 			// Ищем обратную (транспонированную) матрицу
 			for(int i=0; i<3; ++i)
 			{
-				Cbn[index(3, 2, i)] = MeanAb[i] / g;
-				Cbn[index(3, 1, i)] = (MeanOmb[i]/ U - MeanAb[i]/g*sin(phi0))/cos(phi0);
+				Cbn[index(3, 2, i)] = (double) MeanAb[i] / g;
+				Cbn[index(3, 1, i)] = (double) (MeanOmb[i]/ U - (double) MeanAb[i]/g*sin(phi0))/cos(phi0);
 			}
 			// по алгебраическому дополнению
 			Cbn[index(3, 0, 0)] = (double) Cbn[index(3, 1, 1)] * Cbn[index(3, 2, 2)] - Cbn[index(3, 2, 1)] * Cbn[index(3, 1, 2)];
@@ -169,12 +174,12 @@ int main()
 			}
 		}
 #if 1
-		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);
-		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);
-		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);
+		Omo[0] = (double) -V[1]/(R + Coordinates[2]);// Rphi
+		Omo[1] = (double) V[0]/(R + Coordinates[2]);// Rlambda
+		Omo[2] = (double) V[0]/(R + Coordinates[2])*tan(Coordinates[0]);// Rlambda
 		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*cos(Coordinates[0]), (double) Omo[2] + (double) U*sin(Coordinates[0])}; // абсолютные угловые скорости
-		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h;
-		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; //
+		Coordinates[0] += (double) (V[1]/(R + Coordinates[2])) * h; // Rphi
+		Coordinates[1] += (double) (V[0]/((R + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
 		Coordinates[2] += ((double) V[2]) * h;
 		// Решение уравнения Пуассона
 		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
@@ -229,8 +234,31 @@ int main()
 		CoordErr[1] +=(V[1] - (double) Vabs*cos(H0)) * h;
 #endif
 #if 1 // Пересчет радиусов сильно влияет на ошибки
+#if 0
+		double sqrSinErr {0}; //Ошибка возведения синуса в квадрат 
+		double sin2sin {0};
+
+		TwoProduct(sin(Coordinates[0]), sin(Coordinates[0]), sin2sin, sqrSinErr); 
+		TwoSum(sin2sin, sqrSinErr, sin2sin, sqrSinErr, false); //sin*sin
+		
+		double e2Sin {0}; // e*e*sin*sin
+		double e2SinErr {0};
+		TwoProduct(E2E, sin2sin, e2Sin, e2SinErr); //// e*e*sin*sin
+		TwoSum(e2Sin, e2SinErr, e2Sin, e2SinErr, false); //e*e*sin*sin
+
+		e2SinErr = 0;
+		double oneE2Sin {0}; // 1 - e*e*sin*sin
+		TwoSum(1., -e2SinErr, oneE2Sin, e2SinErr, false);
+		TwoSum(oneE2Sin, e2SinErr, oneE2Sin, e2SinErr, false);
+		
+		Rlambda = (double) R/sqrt(oneE2Sin);
+		Rphi = (double) R*(1 - e*e)/(sqrt(oneE2Sin) * (oneE2Sin));
+#endif
+
+#if 1
 		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+#endif
 #endif
 
 		// инкремент тактов

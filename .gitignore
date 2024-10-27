@@ -6,3 +6,5 @@ data/*
 # dir tmp, but not /tmp/makefile
 tmp/*
 !./tmp/Makefile
+#dir build
+build/*
