@@ -24,7 +24,7 @@ int main()
 
 	int freq = 100; // частота измерений с инерциальных датчиков
 	double h = 0.01; //период дискретизации
-	int t_nav = 90*60; // время работы нав алгоритма в секундах
+	int t_nav = 8*60; // время работы нав алгоритма в секундах
 	int t_alignment = 5*60*freq; // время выставки в тактах
 
 	int cur_time = 0; // текущий такт!! измерения
@@ -92,13 +92,13 @@ int main()
 	{
 		// int res = fscanf(file, "%f;%f;%f;%f;%f;%f;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2]);
 		//int res = fscanf(file, "%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
-		int res = fscanf(file, "%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
+		int res = fscanf(file, "%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
 		if (res!=18)
 		{
 			printf("Check error at %d iteration\n", cur_time);
 			break;
 		}
-#if 1
+#if 0
 		/*Генерирование (моделирование) показаний ч.э*/
 		if (cur_time <= t_alignment)
 		{
@@ -109,13 +109,13 @@ int main()
 		}
 		else
 		{
-			Omo[0] = (double) -Vabs*cos(H0) / (R + 0); //Rphi
-			Omo[1] = (double) Vabs*sin(H0) / ((R + 0)) + (double) U*cos(phi0); // Rlambda
-			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (R + 0) + (double) U*sin(phi0);// Rlambda
+			Omo[0] = (double) -Vabs*cos(H0) / (Rphi + 0); //Rphi
+			Omo[1] = (double) Vabs*sin(H0) / ((Rlambda + 0)) + (double) U*cos(phi0); // Rlambda
+			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (double) U*sin(phi0);// Rlambda
 			Ao[0] = 0.0;//(double) ( Omo[1]*0 -(double) Omo[2]*Vabs*cos(H0) + (double) U*cos(phi0)*0 - (double) U*sin(phi0)*Vabs*cos(H0));
 			Ao[1] = 0.0;//(double) (-Omo[0]*0 +(double) Omo[2]*Vabs*sin(H0) + (double) U*sin(phi0)*Vabs*sin(H0));
 			Ao[2] = g;
-			phi0 += (double) Vabs*cos(H0)/(R + 0) * h;
+			phi0 += (double) Vabs*cos(H0)/(Rphi + 0) * h;
 		}
 		//printf("Cur_time = %d\n", cur_time);
 		//printf("Modelled Ao = [%.20f; %.20f; %.20f]\n", Ao[0], Ao[1], Ao[2]);
@@ -174,12 +174,12 @@ int main()
 			}
 		}
 #if 1
-		Omo[0] = (double) -V[1]/(R + Coordinates[2]);// Rphi
-		Omo[1] = (double) V[0]/(R + Coordinates[2]);// Rlambda
-		Omo[2] = (double) V[0]/(R + Coordinates[2])*tan(Coordinates[0]);// Rlambda
+		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);// Rphi
+		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);// Rlambda
+		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);// Rlambda
 		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*cos(Coordinates[0]), (double) Omo[2] + (double) U*sin(Coordinates[0])}; // абсолютные угловые скорости
-		Coordinates[0] += (double) (V[1]/(R + Coordinates[2])) * h; // Rphi
-		Coordinates[1] += (double) (V[0]/((R + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
+		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h; // Rphi
+		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
 		Coordinates[2] += ((double) V[2]) * h;
 		// Решение уравнения Пуассона
 		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
@@ -256,8 +256,8 @@ int main()
 #endif
 
 #if 1
-		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 #endif
 #endif
 
