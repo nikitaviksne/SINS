@@ -8,6 +8,7 @@
 #include "std.h"
 #include <cmath>
 #include "mathematics.h"
+#include <fstream> //файловые потоки для чтения бинарного файла
 
 int main()
 {
@@ -75,30 +76,56 @@ int main()
 	double Rphi;
 	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = false;
+	bool AllowBiasAcc = true;
 	bool AllowBiasGyr = false;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
-	// Чтение из файла ускорений и угловых скоростей
-	FILE* file=fopen("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", "rt");
-	fscanf(file, "%*[^\n]"); //для файла, разделенного пробелами
-	//fscanf(file, "%*s;"); // для файла, разделенного точкой с запятой
 
 	double resultV[2] = {0};
 	double Verr1[2] = {0}; // ошибки интегрирования ускорений
 	double Verr2[2] = {0}; // ошибки накопления скоростей
 
-	while(true)
+	// Чтение из файла ускорений и угловых скоростей
+	std::ifstream is("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", std::ios::binary);
+	while (is.read((char *) &Ab[0], sizeof(double))) //пока считывается первое измерение (ускорение по оси Xb)
 	{
-		// int res = fscanf(file, "%f;%f;%f;%f;%f;%f;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2]);
-		//int res = fscanf(file, "%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;%e;", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
-		int res = fscanf(file, "%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e%e", &Ab[0],&Ab[1],&Ab[2],&Omb[0],&Omb[1],&Omb[2], &BiasAb[0],&BiasAb[1],&BiasAb[2],&BiasOmb[0],&BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1],&RandAb[2],&RandOmb[0],&RandOmb[1],&RandOmb[2]);
-		if (res!=18)
+		//Заканчиваю считывать показания акселерометров
+		for (int jjj=1; jjj<3; ++jjj)
+			is.read((char *) &Ab[jjj], sizeof(double));
+
+		//Считываю показания ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &Omb[jjj], sizeof(double));
+
+		//Считываю показания постоянных смещений нуля акселерометров
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &BiasAb[jjj], sizeof(double));
+
+		//Считываю показания постоянных смещений нуля ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &BiasOmb[jjj], sizeof(double));
+
+		//Считываю показания случайных смещений нуля акселерометров
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &RandAb[jjj], sizeof(double));
+
+		//Считываю показания случайных смещений нуля ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &RandOmb[jjj], sizeof(double));
+
+		//добавление дрейфов к показаниям
+		for (int ii=0; ii<3; ++ii)
 		{
-			printf("Check error at %d iteration\n", cur_time);
-			break;
+			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
+			Omb[ii] += AllowBiasGyr*BiasAb[ii] + AllowRandGyr*RandOmb[ii];
 		}
+
 #if 0
+		printf("считанное ускорение (2й элемент): %.20f\n", Ab[2]);
+		printf("считанный случ дрейф ДУС (последний элемент): %.20f", RandOmb[2]);
+		std::getc(stdin);
+
+
 		/*Генерирование (моделирование) показаний ч.э*/
 		if (cur_time <= t_alignment)
 		{
@@ -212,14 +239,13 @@ int main()
 		/*
 		V[0] += (double) (Ao[0] - aCoriolis[0]) * h;// Ve
 		V[1] += (double) (Ao[1] - aCoriolis[1]) * h; //Vn
+		//*/
 
-		V[0] += (double) (Ao[0]) * h;// Ve
-		V[1] += (double) (Ao[1]) * h; //Vn
-		*/
 
+		///*
 		// умножение
-		TwoProduct(Ao[0],h, V_dot[0], Verr2[0]);
-		TwoProduct(Ao[1],h, V_dot[1], Verr2[1]);
+		TwoProduct(Ao[0] - aCoriolis[0], h, V_dot[0], Verr2[0]);
+		TwoProduct(Ao[1] - aCoriolis[1], h, V_dot[1], Verr2[1]);
 		// компенсация ошибок интегрирования ускорений
 		TwoSum(Verr2[0], V_dot[0], V_dot[0], Verr2[0], false);
 		TwoSum(Verr2[1], V_dot[1], V_dot[1], Verr2[1], false);
@@ -229,9 +255,13 @@ int main()
 		//Компенсация погрешности сложения скоростей с пред. такта и приращения скоростей на тек. такте
 		TwoSum(Verr1[0], V[0], V[0], Verr1[0], false);
 		TwoSum(Verr1[1], V[1],  V[1], Verr1[1], false);
-
+		//*/
 		CoordErr[0] +=(V[0] - (double) Vabs*sin(H0)) * h;
 		CoordErr[1] +=(V[1] - (double) Vabs*cos(H0)) * h;
+
+		/*printf("пересчитанное ускорение (0й элемент): %.20f\n", Ao[0]);
+		printf("Рассчитанное ускорение кориолиса: %.20f", aCoriolis[0]);
+		std::getc(stdin);*/
 #endif
 #if 1 // Пересчет радиусов сильно влияет на ошибки
 #if 0
@@ -269,7 +299,7 @@ int main()
 		static FILE* navig_res;
 		if(!navig_res)
 		{
-			navig_res=fopen("./data/Nav_res.csv","wt");
+			navig_res=fopen("/home/nikita_viksne/InertialNavigation/data/Nav_res.csv","wt");
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
