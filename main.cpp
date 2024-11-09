@@ -14,10 +14,10 @@ int main()
 {
 	//инициализация необходимых переменных и констант
 	const double g = 9.81;
-	const double a = 6378245;
-	const double b = 6356856;
+	const double a = 6378245.0;
+	const double b = 6356856.0;
 	const double e=sqrt(1 - b*b/a/a);
-	const double R=6400e3;
+	const double R=6400.0e3;
 	const double pi=3.141592653589793;
 	const double U = 7.27220521664304e-05;
 	const double rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
@@ -37,13 +37,16 @@ int main()
 	double H0 = (double) (50)*deg2rad;
 	double P0 = (double) (0)*deg2rad;
 	double R0 = (double) (0)*deg2rad;
-	double Vabs = 300;
+	double Vabs = 30;
 	double Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
 	double phi0 = (double) 55*deg2rad;
 	double lambda0 = (double) 33*deg2rad;
 	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
+	double eps (0); // Ащимут в БИНС можно положить 0
+	/*Матрица Beo - матрица перехода из с.к "e" (гринвической экваториальной) в "o" (опорную, в данном случае, полусвободную в азимуте) */
+	double Beo[9] = {-sin(lambda0), cos(lambda0), 0, -sin(phi0)*cos(lambda0), -sin(phi0)*sin(lambda0), cos(phi0), cos(phi0)*cos(lambda0), cos(phi0)*sin(lambda0), sin(phi0)};
 	double Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
 	// Необходимые массивы для решение навигационной задачи
@@ -62,21 +65,22 @@ int main()
 	double StdOmb[3] = {0};
 	double Cbn[9] = {0};
 	// массивы для выходных значений
+	double V0[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // Начальные (эталонные) линейные скорости E; N; Up По ним я буду определять ошибку
 	double V[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	double Orientation[3] = {0}; // Углы ориентации
 	double CoordErr[2] = {0}; // Ошибки по координатам в метрах
-	double Rlambda;
 
 	double sqrEErr {0}; //Ошибка возведения e в квадрат 
 	double E2E {0};
 	TwoProduct(e, e, E2E, sqrEErr);
 	TwoSum(E2E, sqrEErr, E2E, sqrEErr, false);
-	Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-	double Rphi;
-	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+	double Rlambda (R);
+	//Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	double Rphi (R);
+	//Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = true;
+	bool AllowBiasAcc = false;
 	bool AllowBiasGyr = false;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
@@ -121,11 +125,6 @@ int main()
 		}
 
 #if 0
-		printf("считанное ускорение (2й элемент): %.20f\n", Ab[2]);
-		printf("считанный случ дрейф ДУС (последний элемент): %.20f", RandOmb[2]);
-		std::getc(stdin);
-
-
 		/*Генерирование (моделирование) показаний ч.э*/
 		if (cur_time <= t_alignment)
 		{
@@ -179,7 +178,7 @@ int main()
 		{
 			if (AlignmentContinue)
 			{
-				double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+				double c0 = (double) sqrt(Cbn[index(3, 2, 0)] * Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)] * Cbn[index(3, 2, 2)]);
 				// Вычисление углов ориентации
 				Heading = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
 				Roll = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
@@ -204,10 +203,22 @@ int main()
 		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);// Rphi
 		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);// Rlambda
 		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);// Rlambda
-		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*cos(Coordinates[0]), (double) Omo[2] + (double) U*sin(Coordinates[0])}; // абсолютные угловые скорости
+		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*Beo[index(3,1,2)], (double) Omo[2] + (double) U*Beo[index(3,2,2)]}; // абсолютные угловые скорости
+		/*Пересчет матрицы Beo и определение координат*/
+		double EigOmo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
+		double Beo_new[9] = {0};
+		MulMatrD(EigOmo, Beo, Beo_new, 3, 3, 3); // на самом деле должно быть Beo_new = - EigOmo * Beo, поэтому "минус" учту ниже
+		for (int iii=0; iii<9; ++iii)
+			Beo[iii] = Beo[iii] - Beo_new[iii]*h;
+		
+		#if 0
 		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h; // Rphi
 		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
 		Coordinates[2] += ((double) V[2]) * h;
+		#endif
+		double b0 (sqrt(pow(Beo[index(3,0,2)], 2) + pow(Beo[index(3,1,2)], 2) ));
+		Coordinates[0] = (double) atan2(Beo[index(3,2,2)], b0);
+		Coordinates[1] = (double) atan2(Beo[index(3,2,1)], Beo[index(3,1,2)]); 
 		// Решение уравнения Пуассона
 		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
 		double EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
@@ -230,14 +241,14 @@ int main()
 #if 1
 		//Кориолисовы добавки
 		double aCoriolis[3] = {0};
-		aCoriolis[0] =(double) ((double) omo[1]*V[2] - (double) omo[2]*V[1] + (double) U*cos(Coordinates[0])*V[2] - (double) U*sin(Coordinates[0])*V[1]);
-		aCoriolis[1] =(double) ((double) -omo[0]*V[2] + (double) omo[2]*V[0] + (double) U*sin(Coordinates[0])*V[0]);
-		aCoriolis[2] =(double) ((double) omo[0]*V[1] - (double) omo[1]*V[0] - (double) U*cos(Coordinates[0])*V[0]);
+		aCoriolis[0] =(double) ((double) omo[1]*V[2] - (double) omo[2]*V[1] + (double) U*Beo[index(3,1,2)]*V[2] - (double) U*Beo[index(3,2,2)]*V[1]);
+		aCoriolis[1] =(double) ((double) -omo[0]*V[2] + (double) omo[2]*V[0] + (double) U*Beo[index(3,2,2)]*V[0]);
+		aCoriolis[2] =(double) ((double) omo[0]*V[1] - (double) omo[1]*V[0] - (double) U*Beo[index(3,1,2)]*V[0]);
 
 		double V_dot[2] = {(double) Ao[0], (double) Ao[1] };
 
 		/*
-		V[0] += (double) (Ao[0] - aCoriolis[0]) * h;// Ve
+		V[0] += (double) (Ao[0] - aCoriolis[0]) * h; // Ve
 		V[1] += (double) (Ao[1] - aCoriolis[1]) * h; //Vn
 		//*/
 
@@ -256,8 +267,9 @@ int main()
 		TwoSum(Verr1[0], V[0], V[0], Verr1[0], false);
 		TwoSum(Verr1[1], V[1],  V[1], Verr1[1], false);
 		//*/
-		CoordErr[0] +=(V[0] - (double) Vabs*sin(H0)) * h;
-		CoordErr[1] +=(V[1] - (double) Vabs*cos(H0)) * h;
+
+		CoordErr[0] +=(V[0] - V0[0]) * h;
+		CoordErr[1] +=(V[1] - V0[1]) * h;
 
 		/*printf("пересчитанное ускорение (0й элемент): %.20f\n", Ao[0]);
 		printf("Рассчитанное ускорение кориолиса: %.20f", aCoriolis[0]);
@@ -285,9 +297,9 @@ int main()
 		Rphi = (double) R*(1 - e*e)/(sqrt(oneE2Sin) * (oneE2Sin));
 #endif
 
-#if 1
-		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
-		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+#if 0
+		Rphi = (double) R*(1 - pow(e, 2))/(sqrt(1 - pow(e, 2) * pow(sin(Coordinates[0]), 2)) * (1 - pow(e, 2) * pow(sin(Coordinates[0]), 2) ));
+		Rlambda = (double) R/sqrt(1-pow(e, 2) * pow(sin(Coordinates[0]), 2));
 #endif
 #endif
 
