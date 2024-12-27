@@ -1,10 +1,11 @@
 #ifndef MATHEMATICS_H
 #define MATHEMATICS_H
+#include "std.h"
 
-void TwoSum(double , double , double& , double& , bool );
+void TwoSum(Ldoub , Ldoub , Ldoub& , Ldoub& , bool );
 
-void TwoProduct(double , double , double& , double& );
+void TwoProduct(Ldoub , Ldoub , Ldoub& , Ldoub& );
 
-void Split(double , int , double& , double& );
+void Split(Ldoub , int , Ldoub& , Ldoub& );
 
 #endif
