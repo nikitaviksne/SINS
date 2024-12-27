@@ -1,317 +1,549 @@
-#if 1
 #define _USE_MATH_DEFINES
 #include <stdio.h>
-#include "matrix.h"
-#if 0
-#include <math.h>
-#endif
-#include "std.h"
-#include <cmath>
+#include <std.h>
+#include <matrix.h>
 #include "mathematics.h"
+#include <cmath>
 #include <fstream> //файловые потоки для чтения бинарного файла
+#include <QDataStream>
+#include <QFile>
 
+void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
+{
+	C[0] = (Ldoub) cos(R) * cos(H) + sin(R)*sin(H)* sin(P);
+	C[1] = (Ldoub) sin(R) * cos(H)*sin(P) - cos(R)*sin(H);
+	C[2] = (Ldoub) -sin(R) * cos(P);
+	C[3] = (Ldoub) cos(P) * sin(H);
+	C[4] = (Ldoub) cos(H) * cos(P);
+	C[5] = (Ldoub) sin(P);
+	C[6] = (Ldoub) sin(R) * cos(H) - cos(R) * sin(H) * sin(P);
+	C[7] = (Ldoub) -sin(R) * sin(H) - cos(R) * cos(H) * sin(P);
+	C[8] = (Ldoub) cos(R) * cos(P);
+}
+
+void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, Ldoub* Ab, Ldoub* Omb)
+{
+
+	//Считываю показания акселерометров
+	for (int jjj=0; jjj<3; ++jjj)
+		in >> Ab[jjj];
+
+	//Считываю показания ДУС
+	for (int jjj=0; jjj<3; ++jjj)
+	{
+		in >> Omb[jjj];
+		//Omb[jjj] *= (-1.);
+	}
+	Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
+	Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
+	Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
+	Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
+	//Считываю показания постоянных смещений нуля акселерометров
+	for (int jjj=0; jjj<3; ++jjj)
+		in >> BiasAb[jjj];
+
+	//Считываю показания постоянных смещений нуля ДУС
+	for (int jjj=0; jjj<3; ++jjj)
+		in >> BiasOmb[jjj];
+
+	//Считываю показания случайных смещений нуля акселерометров
+	for (int jjj=0; jjj<3; ++jjj)
+		in >> RandAb[jjj];
+
+	//Считываю показания случайных смещений нуля ДУС
+	for (int jjj=0; jjj<3; ++jjj)
+		in >> RandOmb[jjj];
+	//добавление дрейфов к показаниям
+	for (int ii=0; ii<3; ++ii)
+	{
+		Ab[ii] += (Ldoub) AllowBiasAcc*BiasAb[ii] + (Ldoub) AllowRandAcc*RandAb[ii];
+		Omb[ii] +=(Ldoub) AllowBiasGyr*BiasOmb[ii] + (Ldoub) AllowRandGyr*RandOmb[ii];
+	}
+
+}
+#if 0
+void GeneratedSens(Ldoub *Ab, Ldoub *Omb, Ldoub Vabs, Ldoub H0, int cur_time, int t_alignment, Ldoub U, Ldoub g, Ldoub* Cnb)
+{
+	/*Генерирование (моделирование) показаний ч.э*/
+	Ldoub Omo[3] = {0};
+	Ldoub Ao[3] = {0};
+	if (cur_time <= t_alignment)
+	{
+		Ao[0] = 0.0; Ao[1] = 0.0; Ao[2] = g;
+		Omo[0] = 0;
+		Omo[1] = (Ldoub) U*cos(phi0);
+		Omo[2] = (Ldoub) U*sin(phi0);
+	}
+	else
+	{
+		/*
+		Omo[0] = (Ldoub) -Vabs*cos(H0) / (Rphi + 0);
+		Omo[1] = (Ldoub) Vabs*sin(H0) / ((Rlambda + 0)) + (Ldoub) U*cos(phi0);
+		Omo[2] = (Ldoub) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (Ldoub) U*sin(phi0);
+		*/
+		Omo[0] = 0;
+		Omo[1] = (Ldoub) U*cos(phi0);
+		Omo[2] = (Ldoub) U*sin(phi0);
+		Ao[0] = 0.0;// + (Ldoub) ( Omo[1]*0 -(Ldoub) Omo[2]*Vabs*cos(H0) + (Ldoub) U*cos(phi0)*0 - (Ldoub) U*sin(phi0)*Vabs*cos(H0));
+		Ao[1] = 0.0;// +(Ldoub) (-Omo[0]*0 +(Ldoub) Omo[2]*Vabs*sin(H0) + (Ldoub) U*sin(phi0)*Vabs*sin(H0));
+		Ao[2] = g;
+		phi0 += (Ldoub) Vabs*cos(H0)/(R + 0)/freq1;
+	}
+	MulMatrD(Cnb, Ao, Ab, 3, 3, 1); // проекция ускорений на связанные оси
+	MulMatrD(Cnb, Omo, Omb, 3, 3, 1); // проекция угловых скоростей на связанные оси
+}
+#endif
 int main()
 {
-	//инициализация необходимых переменных и констант
-	const double g = 9.81;
-	const double a = 6378245.0;
-	const double b = 6356856.0;
-	const double e=sqrt(1 - b*b/a/a);
-	const double R=6400.0e3;
-	const double pi=3.141592653589793;
-	const double U = 7.27220521664304e-05;
-	const double rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
-	const double deg2rad = 1./rad2deg;
-
+	 //инициализация необходимых переменных и констант
+	const Ldoub g = 9.81;
+	const Ldoub a = 6378245;
+	const Ldoub b = 6356856;
+	const Ldoub e = (Ldoub) sqrt(1 - b*b/a/a);
+	const Ldoub R = 6400e3;
+	const Ldoub pi = 3.141592653589793;
+	const Ldoub U = 7.27220521664304e-05;
+	const Ldoub rad2deg = 180./M_PI; // из градусов в радианы в секунду
+	const Ldoub deg2rad = 1./rad2deg;
 	int freq = 100; // частота измерений с инерциальных датчиков
-	double h = 0.01; //период дискретизации
-	int t_nav = 8*60; // время работы нав алгоритма в секундах
-	int t_alignment = 5*60*freq; // время выставки в тактах
-
+	Ldoub h = 0.01; //период дискретизации
+	int freq1 = 400; // частота свехбыстрого цикла
+	Ldoub h1 (1./400); // период дискретизации свехбыстрого цикла
+	int t_nav = 40*60; // время работы нав алгоритма в секундах
+	int t_alignment = (int) 5*60*freq1; // время выставки в тактах
+	Ldoub Rlambda;
+	Ldoub Rphi;
+	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
-	/*
-	 * Начальные значения.
-	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
-	*/
 	// Для моделирования показаний Ч.Э.
-	double H0 = (double) (50)*deg2rad;
-	double P0 = (double) (0)*deg2rad;
-	double R0 = (double) (0)*deg2rad;
-	double Vabs = 30;
-	double Cnb[9];
+	Ldoub H0 = (Ldoub) (50.)*deg2rad;
+	Ldoub P0 = (Ldoub) (0.)*deg2rad;
+	Ldoub R0 = (Ldoub) (0.)*deg2rad;
+	Ldoub Vabs = 0;
+	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
-	double phi0 = (double) 55*deg2rad;
-	double lambda0 = (double) 33*deg2rad;
-	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
-	double eps (0); // Ащимут в БИНС можно положить 0
-	/*Матрица Beo - матрица перехода из с.к "e" (гринвической экваториальной) в "o" (опорную, в данном случае, полусвободную в азимуте) */
-	double Beo[9] = {-sin(lambda0), cos(lambda0), 0, -sin(phi0)*cos(lambda0), -sin(phi0)*sin(lambda0), cos(phi0), cos(phi0)*cos(lambda0), cos(phi0)*sin(lambda0), sin(phi0)};
-	double Heading = 0, Roll = 0, Pitch = 0;
+	Ldoub lambda0 = (Ldoub) 33*deg2rad;
+	Ldoub DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
+	Ldoub Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
 	// Необходимые массивы для решение навигационной задачи
-	double Ab[3] = {0}; // Ускорения в связанных осях
-	double BiasAb[3] = {0}; //Смещение нулей акселерометров
-	double BiasOmb[3] = {0}; //Смещение нулей гироскопов
-	double RandAb[3] = {0}; //Случайные погрешности акселерометров
-	double RandOmb[3] = {0}; //Случайные погрешности гироскопов
-	double Ao[3] = {0}; // Ускорения в географических осях
-	double Omb[3] = {0}; // Угловые скорости в связанных осях
-	double Omo[3] = {0}; // Угловые скорости в географических осях
-	//double Oms[3] = {0}; // угловые скорости от линейного движения + Земля
-	double MeanAb[3] = {0};
-	double MeanOmb[3] = {0};
-	double StdAb[3] = {0};
-	double StdOmb[3] = {0};
-	double Cbn[9] = {0};
+	Ldoub Ab[3]={0}; // Ускорения в связанных осях
+	Ldoub Ao[3] = {0}; // Ускорения в географических осях
+	Ldoub Omb[3] = {0}; // Угловые скорости в связанных осях
+	Ldoub Omo[3] = {0}; // Угловые скорости в географических осях
+	//Ldoub Oms[3] = {0}; // угловые скорости от линейного движения + Земля
+	Ldoub MeanAb[3] = {0};
+	Ldoub MeanOmb[3] = {0};
+	Ldoub StdAb[3] = {0};
+	Ldoub StdOmb[3] = {0};
+	Ldoub Cbn[9] = {0};
+	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной системы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
+	Ldoub Cin[9] = {1., 0, 0, 0, 1., 0, 0, 0, 1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
 	// массивы для выходных значений
-	double V0[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // Начальные (эталонные) линейные скорости E; N; Up По ним я буду определять ошибку
-	double V[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
-	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
-	double Orientation[3] = {0}; // Углы ориентации
-	double CoordErr[2] = {0}; // Ошибки по координатам в метрах
+	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up 
+	Ldoub V[3] = {V0[0], V0[1], V0[2]};
+	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
+	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
+	Ldoub CoordError2[2] = {0}; //Ошибки в м, с вдвойне грубой разрядной сеткой
+	Ldoub Orientation[3] = {0}; // Углы ориентации
 
-	double sqrEErr {0}; //Ошибка возведения e в квадрат 
-	double E2E {0};
-	TwoProduct(e, e, E2E, sqrEErr);
-	TwoSum(E2E, sqrEErr, E2E, sqrEErr, false);
-	double Rlambda (R);
-	//Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-	double Rphi (R);
-	//Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
-
+	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+#if 0
+	printf("sizeof(float) = %d\n", sizeof(float));
+	printf("sizeof(double) = %d\n", sizeof(double));
+	printf("sizeof(long double) = %d\n", sizeof(long double));
+#endif
 	bool AllowBiasAcc = false;
-	bool AllowBiasGyr = false;
+	bool AllowBiasGyr = true;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
-
-	double resultV[2] = {0};
-	double Verr1[2] = {0}; // ошибки интегрирования ускорений
-	double Verr2[2] = {0}; // ошибки накопления скоростей
-
+	//Создаем квазикоординаты
+	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
+	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
+	Ldoub wCoriolis[2] = {0}; //Приращения скоростей от ускорения Кориолиса
+	
 	// Чтение из файла ускорений и угловых скоростей
-	std::ifstream is("/home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc.csv", std::ios::binary);
-	while (is.read((char *) &Ab[0], sizeof(double))) //пока считывается первое измерение (ускорение по оси Xb)
-	{
-		//Заканчиваю считывать показания акселерометров
-		for (int jjj=1; jjj<3; ++jjj)
-			is.read((char *) &Ab[jjj], sizeof(double));
-
-		//Считываю показания ДУС
-		for (int jjj=0; jjj<3; ++jjj)
-			is.read((char *) &Omb[jjj], sizeof(double));
-
-		//Считываю показания постоянных смещений нуля акселерометров
-		for (int jjj=0; jjj<3; ++jjj)
-			is.read((char *) &BiasAb[jjj], sizeof(double));
-
-		//Считываю показания постоянных смещений нуля ДУС
-		for (int jjj=0; jjj<3; ++jjj)
-			is.read((char *) &BiasOmb[jjj], sizeof(double));
-
-		//Считываю показания случайных смещений нуля акселерометров
-		for (int jjj=0; jjj<3; ++jjj)
-			is.read((char *) &RandAb[jjj], sizeof(double));
-
-		//Считываю показания случайных смещений нуля ДУС
-		for (int jjj=0; jjj<3; ++jjj)
-			is.read((char *) &RandOmb[jjj], sizeof(double));
-
-		//добавление дрейфов к показаниям
-		for (int ii=0; ii<3; ++ii)
-		{
-			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
-			Omb[ii] += AllowBiasGyr*BiasAb[ii] + AllowRandGyr*RandOmb[ii];
-		}
+#if 1
+	QFile file("C:/Users/Viksne_NA/Documents/Python Scripts/data_files/data_acc_static_state_heading_50.csv");
+	file.open(QIODevice::ReadOnly);
+	QDataStream in(&file);
+	in.setByteOrder(QDataStream::LittleEndian);
+#endif
 
 #if 0
-		/*Генерирование (моделирование) показаний ч.э*/
-		if (cur_time <= t_alignment)
-		{
-			Ao[0] = 0.0; Ao[1] = 0.0; Ao[2] = g;
-			Omo[0] = 0;
-			Omo[1] = (double) U*cos(phi0);
-			Omo[2] = (double) U*sin(phi0);
-		}
-		else
-		{
-			Omo[0] = (double) -Vabs*cos(H0) / (Rphi + 0); //Rphi
-			Omo[1] = (double) Vabs*sin(H0) / ((Rlambda + 0)) + (double) U*cos(phi0); // Rlambda
-			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (double) U*sin(phi0);// Rlambda
-			Ao[0] = 0.0;//(double) ( Omo[1]*0 -(double) Omo[2]*Vabs*cos(H0) + (double) U*cos(phi0)*0 - (double) U*sin(phi0)*Vabs*cos(H0));
-			Ao[1] = 0.0;//(double) (-Omo[0]*0 +(double) Omo[2]*Vabs*sin(H0) + (double) U*sin(phi0)*Vabs*sin(H0));
-			Ao[2] = g;
-			phi0 += (double) Vabs*cos(H0)/(Rphi + 0) * h;
-		}
-		//printf("Cur_time = %d\n", cur_time);
-		//printf("Modelled Ao = [%.20f; %.20f; %.20f]\n", Ao[0], Ao[1], Ao[2]);
-		MulMatrD(Cnb, Ao, Ab,3,3,1); // проекция ускорений на связанные оси
-		//printf("Modelled Ab = [%.20e; %.20e; %.20e]\n", Ab[0], Ab[1], Ab[2]);
-		MulMatrD(Cnb, Omo, Omb,3,3,1); // проекция угловых скоростей на связанные оси
+	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
+	fscanf(file, "%*s;");
 #endif
+	Ldoub resultV[2] = {0};
+	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
+	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
+	
+	while( !( in.atEnd() ))// && ((cur_time <= (int) 30*60*freq ) ||  AlignmentContinue ))	
+	{
 		// этап выставки
-		if (cur_time <= t_alignment)
+		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
+			#if 1
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, Ab, Omb); //чтение из файла
+			#endif
+			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 			for(int i=0; i<3; ++i)
 			{
 				// применяем метод Уэлфорда
-				MeanAb[i] = (double) MeanAb[i] + (Ab[i] - MeanAb[i]) / (cur_time+1);
-				StdAb[i] = (double) (1 - 1/(cur_time + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(cur_time + 1);
-				MeanOmb[i] = (double) MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (cur_time+1);
-				StdOmb[i] = (double) (1 - 1/(cur_time + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(cur_time + 1);
+				MeanAb[i] = (Ldoub) MeanAb[i] + (Ab[i] - MeanAb[i]) / (cur_time + 1); //(cur_time * MeanAb[i] + Ab[i])/(cur_time + 1);
+				StdAb[i] = (Ldoub) (1 - 1/(cur_time + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(cur_time + 1);
+				MeanOmb[i] = (Ldoub) MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (cur_time + 1);//(cur_time * MeanOmb[i] + Omb[i])/(cur_time + 1);
+				StdOmb[i] = (Ldoub) (1 - 1/(cur_time + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(cur_time + 1);
 			}
 			//Вычисление (ориентации) матрицы перехода Cbn = [c00, c01, c02, c10, c11, c12, c20, c21, c22]
 			// Ищем обратную (транспонированную) матрицу
 			for(int i=0; i<3; ++i)
 			{
-				Cbn[index(3, 2, i)] = (double) MeanAb[i] / g;
-				Cbn[index(3, 1, i)] = (double) (MeanOmb[i]/ U - (double) MeanAb[i]/g*sin(phi0))/cos(phi0);
+				Cbn[index(3, 2, i)] = (Ldoub) MeanAb[i] / g;
+				Cbn[index(3, 1, i)] = (Ldoub) (MeanOmb[i]/ U - MeanAb[i]/g*sin(phi0))/cos(phi0);
 			}
 			// по алгебраическому дополнению
-			Cbn[index(3, 0, 0)] = (double) Cbn[index(3, 1, 1)] * Cbn[index(3, 2, 2)] - Cbn[index(3, 2, 1)] * Cbn[index(3, 1, 2)];
-			Cbn[index(3, 0, 1)] = (double) - Cbn[index(3, 1, 0)] * Cbn[index(3, 2, 2)] + Cbn[index(3, 1, 2)] * Cbn[index(3, 2, 0)];
-			Cbn[index(3, 0, 2)] = (double) Cbn[index(3, 1, 0)] * Cbn[index(3, 2, 1)] - Cbn[index(3, 1, 1)] * Cbn[index(3, 2, 0)];
-			++cur_time;
+			Ldoub res1=0, err1=0, res2=0, err2=0;
+			TwoProduct(Cbn[index(3, 1, 1)], Cbn[index(3, 2, 2)], res1, err1);
+			TwoProduct(Cbn[index(3, 2, 1)], Cbn[index(3, 1, 2)], res2, err2);
+			Cbn[index(3, 0, 0)] = (Ldoub) res1 + err1 + res2 + err2;
+			res1=0; err1=0; res2=0; err2=0;
+			TwoProduct( Cbn[index(3, 1, 2)], Cbn[index(3, 2, 0)], res1, err1);
+			TwoProduct(Cbn[index(3, 1, 0)], Cbn[index(3, 2, 2)], res2, err2);
+			Cbn[index(3, 0, 1)] = (Ldoub) res1 + err1 - (res2 + err2);
+			res1=0; err1=0; res2=0; err2=0;
+			TwoProduct(Cbn[index(3, 1, 0)], Cbn[index(3, 2, 1)], res1, err1);
+			TwoProduct(Cbn[index(3, 1, 1)], Cbn[index(3, 2, 0)], res2, err2);
+			Cbn[index(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
+			++cur_time; // для 400 Гц
+			/*
+			printf("Mean Omb\n");
+			print2dMatr(MeanOmb, 1, 3);
+			*/
 			continue;
 		}
 		else
 		{
 			if (AlignmentContinue)
 			{
-				double c0 = (double) sqrt(Cbn[index(3, 2, 0)] * Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)] * Cbn[index(3, 2, 2)]);
+				printf("Mean Omb not in Mean\n");
+				print2dMatr(MeanOmb, 1, 3);
+				Ldoub c0 = (Ldoub) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
 				// Вычисление углов ориентации
-				Heading = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-				Roll = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-				Pitch = (double) atan2(Cbn[index(3, 2, 1)], c0);
+				Heading = (Ldoub) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+				Roll = (Ldoub) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+				Pitch = (Ldoub) atan2(Cbn[index(3, 2, 1)], c0);
 				// вычисление ошибок выставки
-				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2]
-				+ MeanAb[0]*MeanAb[0]);
+				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2] + MeanAb[0]*MeanAb[0]);
 				DeltaPitch = (StdAb[1])/sqrt(g*g - MeanAb[1]*MeanAb[1]);
-				double DeltaWn[3];
+				Ldoub DeltaWn[3];
 				MulMatrD(Cbn, StdOmb, DeltaWn,3,3,1); // проекция дрейфов гироскопов на географические оси
-				double DeltaAn[3];
+				Ldoub DeltaAn[3];
 				MulMatrD(Cbn, StdAb, DeltaAn,3,3,1); // проекция дрейфов акселерометров на географические оси
 				DeltaHeading = - DeltaWn[0]/(U*cos(phi0)) + DeltaAn[0]/g*tan(phi0) - StdAb[2]/2/g*sin(2*Heading);
 				printf("Alignment\n");
-				printf("Heading (degrees) = %.30f Error = %f\n", (double) Heading*rad2deg, (double) DeltaHeading*rad2deg);
-				printf("roll (degrees) = %.30f Error = %f\n", (double) Roll*rad2deg, (double) DeltaRoll*rad2deg);
-				printf("pitch (degrees) = %.30f Error = %f\n", (double) Pitch*rad2deg, (double) DeltaPitch*rad2deg);
+				printf("Heading (degrees) = %.30f Error = %f\n", Heading*rad2deg, DeltaHeading*rad2deg);
+				printf("roll (degrees) = %.30f Error = %f\n", Roll*rad2deg, DeltaRoll*rad2deg);
+				printf("pitch (degrees) = %.30f Error = %f\n", Pitch*rad2deg, DeltaPitch*rad2deg);
 				AlignmentContinue = false;
+				Transpose2M(Cbn, Cib, 3); // начальное значение Cib; Cib(0)
+				//Transpose(Cib,3);
+				cur_time = 0; // для 100 Гц
 			}
+
 		}
 #if 1
-		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);// Rphi
-		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);// Rlambda
-		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);// Rlambda
-		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*Beo[index(3,1,2)], (double) Omo[2] + (double) U*Beo[index(3,2,2)]}; // абсолютные угловые скорости
-		/*Пересчет матрицы Beo и определение координат*/
-		double EigOmo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
-		double Beo_new[9] = {0};
-		MulMatrD(EigOmo, Beo, Beo_new, 3, 3, 3); // на самом деле должно быть Beo_new = - EigOmo * Beo, поэтому "минус" учту ниже
-		for (int iii=0; iii<9; ++iii)
-			Beo[iii] = Beo[iii] - Beo_new[iii]*h;
+		Ldoub MeanAlpha[3] = {0};//осредненные малые приращения углов (псевдокоординаты)
+		Ldoub MeanW[3] = {0}; //осредненные малые приращения скоростей
+
+		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
+
+		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равентсов нестрогое
+		{
+			#if 1
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, Ab, Omb); //чтение из файла
+			#endif
+			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
+			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
+			for (int iii=0; iii<3; ++iii)
+			{
+				alpha[index(4, iii, in_iter)] = (Ldoub) Omb[iii]*h1;
+				MeanAlpha[iii] = (Ldoub) MeanAlpha[iii] + (Omb[iii] - MeanAlpha[iii]) / (in_iter + 1);
+				w[index(4, iii, in_iter)] = (Ldoub) Ab[iii]*h1;
+				MeanW[iii] = (Ldoub) MeanW[iii] + (w[iii] - MeanW[iii]) / (in_iter + 1);
+			}
+			//Определение приращения скорости для каждого значения сверхбыстрого цикла
+			//кососиметрическая матрица псевдокоординат
+			Ldoub EigAl[9] = {0, -Omb[2]*h1, Omb[1]*h1, Omb[2]*h1, 0, -Omb[0]*h1, -Omb[1]*h1, Omb[0]*h1, 0};
+			//вычисляем k1
+			Ldoub k1[3] = {0};
+			Ldoub al_w[3] = {0};
+			
+			MulMatrD(EigAl, Wp, al_w, 3,3,1);
+			
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k1[nnn] = w[index(4, nnn, in_iter)] - al_w[nnn];
+			}
+			//вычисляем k2
+			Ldoub k2[3]={0.};
+			Ldoub temp_w_k[3] = {0.};
+				
+			for (int i=0; i<3; i++)
+				temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k1[i];
+				
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k2[nnn] = (Ldoub) w[index(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//вычисляем k3
+			Ldoub k3[3]={0.};
+			
+			for (int i=0; i<3; i++) temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k2[i];
+
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k3[nnn] = (Ldoub) w[index(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//вычисляем k4
+			Ldoub k4[3]={0.};
+			for (int i=0; i<3; i++)
+				temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1*k3[i];
+
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k4[nnn] = (Ldoub) w[index(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//считаем приращение скорости
+			for (int ii=0; ii<3; ++ii)
+			{
+				Wp[ii] = (Ldoub) Wp[ii] +  (Ldoub) 1./6*(k1[ii] + 2.*k2[ii] + 2.*k3[ii] + k4[ii]);
+#if 0
+				printf("k1[%d] = %.10f\n", ii, k1[ii]);
+				printf("k2[%d] = %.10f\n", ii, k2[ii]);
+				printf("k3[%d] = %.10f\n", ii, k3[ii]);
+				printf("k4[%d] = %.10f\n", ii, k4[ii]);
+				printf("Wp[%d] = %.10f", ii, Wp[ii]);
+#endif
+			}
+		}		
+		/*Далее идет 100 Гц такт*/
+		//Решение задачи ориентации
+		Ldoub Thet4[3] = {0}; //Вектор Эйлера
+		for (int mmm=0; mmm<3; ++mmm)
+			for (int kkk=0; kkk<4; ++kkk)
+		{
+			Thet4[mmm] += alpha[index(4, mmm, kkk)];
+		}
+		//Для вектора Эйлера необходимо векторное умножение
+		Ldoub al_1_2[3] = {0};
+		Ldoub al_3_4[3] = {0};
+		for (int iii=0; iii<3; ++iii)
+			for (int jjj=0; jjj<2; ++jjj)
+			{
+				al_1_2[iii] += alpha[index(4, iii, jjj)];
+				al_3_4[iii] += alpha[index(4, iii, 3-jjj)];
+			}
+		Ldoub al_1_2_eig[9] = {0, -al_1_2[2], al_1_2[1], al_1_2[2], 0, -al_1_2[0], -al_1_2[1], al_1_2[0], 0};
+		Ldoub temp_res[3] = {0};
+		MulMatrD(al_1_2_eig, al_3_4, temp_res, 3, 3, 1);
 		
-		#if 0
-		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h; // Rphi
-		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
-		Coordinates[2] += ((double) V[2]) * h;
-		#endif
-		double b0 (sqrt(pow(Beo[index(3,0,2)], 2) + pow(Beo[index(3,1,2)], 2) ));
-		Coordinates[0] = (double) atan2(Beo[index(3,2,2)], b0);
-		Coordinates[1] = (double) atan2(Beo[index(3,2,1)], Beo[index(3,1,2)]); 
+		for (int mmm=0; mmm<3; ++mmm)
+		{
+			Thet4[mmm] += 2./3*temp_res[mmm]; // после этого вектор Эйлера 
+		}
+		Ldoub EigThet[9] = {0, -Thet4[2], Thet4[1], Thet4[2], 0, -Thet4[0], -Thet4[1], Thet4[0], 0}; // кососиметрическая матрица вектора Эйлера
+		Ldoub EigThet2[9] = {0}; //квадрат кососиметрической матрицы вектора Эйлера
+		MulMatrD(EigThet, EigThet, EigThet2,3,3,3);
+		Ldoub absThet2 = pow(Thet4[0],2) + pow(Thet4[1],2) + pow(Thet4[2],2); // Квадрат модуля вектора Эйлера
+		//absThet2 = 3.970459053e-13;
+		
+		Ldoub dCbb[9] = {0}; //матрица перехода из связанной в связанную за 1 такт (4*h4)
+		for (int iii=0; iii<3; ++iii)
+			for(int jjj=0; jjj<3; ++jjj)
+			{
+				if (iii==jjj)
+					dCbb[index(3,iii,jjj)] = 1 - (1 - absThet2/6.)*EigThet[index(3,iii,jjj)] + (0.5 - absThet2/24.)*EigThet2[index(3,iii,jjj)];
+				else
+					dCbb[index(3,iii,jjj)] = 0 - (1 - absThet2/6.)*EigThet[index(3,iii,jjj)] + (0.5 - absThet2/24.)*EigThet2[index(3,iii,jjj)];
+			}
+		Ldoub tempCib[9] = {0};
+		MulMatrD(dCbb, Cib, tempCib, 3,3,3);
+		//переприсваивание Cib = tempCib идет ниже, вместе с Cin
+		
+		//Вычисление переносных, относительных и абсолютных угловых скоростей опорной системы координат
+		Omo[0] = (Ldoub) -V[1]/(Rphi + Coordinates[2]);
+		Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
+		Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(phi0); // phi0
+		Ldoub omo[3] = {(Ldoub) Omo[0], (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]), (Ldoub) Omo[2] + (Ldoub) U*sin(Coordinates[0])};// phi0
+		Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
+		Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
+		Coordinates[2] += (Ldoub) (V[2])/freq;
+		//Ldoub EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
+		Ldoub EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
+		//Ldoub EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
+		Ldoub EigWo2[9]={0};//квадрат кососиметрической матрицы абсолютной голвой скорости опорной с.к
+		
+		MulMatrD(EigWo, EigWo, EigWo2, 3, 3, 3);
+
+		Ldoub tempCin[9] = {0};
+		Ldoub dCnn[9] = {0};
+		for (int iii=0; iii<3; ++iii)
+			for(int jjj=0; jjj<3; ++jjj)
+			{
+				if (iii==jjj)
+					dCnn[index(3,iii,jjj)] = 1 - h*EigWo[index(3,iii,jjj)] + pow(h,2)*EigWo2[index(3,iii,jjj)]/2. ;
+				else
+					dCnn[index(3,iii,jjj)] = 0 - h*EigWo[index(3,iii,jjj)] + pow(h,2)*EigWo2[index(3,iii,jjj)]/2. ;
+			}
+		//Cin = dCnn * Cin	
+		MulMatrD(dCnn, Cin, tempCin, 3, 3, 3);
+		for (int ii=0; ii<9; ii++) 
+		{
+			Cib[ii] = tempCib[ii];
+			Cin[ii] = tempCin[ii];
+		}
+#if 0
+		//Шаманим с матрицей body
+		MatrOB(Thet4[2], Thet4[1], Thet4[0], Cib, 3);
+#endif
+#if 0
+		//Шаманим с матрицей o, она же n
+		MatrOB(Omo[2], Omo[1], Omo[0], Cin, 3); // если Omo, то ошибки по углам на уровне 1е-11
+#endif
+		Ldoub Cbi[9] = {0};
+		Transpose2M(Cib, Cbi, 3);//транспонированная матрица Cbi
+		
 		// Решение уравнения Пуассона
-		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
-		double EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
-		double CEigWb[9]; // первое слагаемое уравнения Пуассона
-		double EigWoC[9]; // второе слагаемое уравнения Пуассона
- 		MulMatrD(Cbn, EigWb, CEigWb,3,3,3);
-		MulMatrD(EigWo, Cbn, EigWoC,3,3,3);
+		MulMatrD(Cin, Cbi, Cbn, 3,3,3);
+#if 0
+		for (int iii=0; iii<3; ++iii)
+			for(int jjj=0; jjj<3; ++jjj)
+				if (iii==jjj) Cbn[index(3, iii,jjj)] = 1;
+				else Cbn[index(3, iii,jjj)] = 0;
+#endif
+		/*Процедура нормирования и ортогонализации*/
+#if 0
+		//контроль масштаба
+		//Строки
+		for (int iii=0; iii<3; ++iii)
+			{
+				Ldoub string[3] = {Cbn[index(3,iii,0)], Cbn[index(3,iii,1)], Cbn[index(3,iii,2)]};
+				Ldoub norm[1];
+				MulMatrD(string, string, norm, 1,3,1);
+				norm[0] = 1 - norm[0];
+				for (int jjj=0; jjj < 3; ++jjj)
+					Cbn[index(3,iii,jjj)] = Cbn[index(3,iii,jjj)]  - 0.5*norm[0]*Cbn[index(3,iii,jjj)];
+			}
+		//Столбцы
+		for (int iii=0; iii<3; ++iii)
+			{
+				Ldoub string[3] = {Cbn[index(3,0,iii)], Cbn[index(3,1,iii)], Cbn[index(3,2,iii)]};
+				Ldoub norm[1];
+				MulMatrD(string, string, norm, 1,3,1);
+				norm[0] = 1 - norm[0];
+				for (int jjj=0; jjj < 3; ++jjj)
+					Cbn[index(3,jjj,iii)] = Cbn[index(3,jjj,iii)]  - 0.5*norm[0]*Cbn[index(3,jjj,iii)];
+			}
+#endif
+#if 0
+		// ортогонализация
+		//по строкам
+		for(int iii=0; iii < 3; ++iii)
+			for(int jjj=0; jjj < 3; ++jjj)
+			{
+				if(iii==jjj) continue;
+				Ldoub string[3] = {Cbn[index(3,iii,0)], Cbn[index(3,iii,1)], Cbn[index(3,iii,2)]};
+				Ldoub column[3] = {Cbn[index(3,jjj,0)], Cbn[index(3,jjj,1)], Cbn[index(3,jjj,2)]};
+				Ldoub norm[1];
+				MulMatrD(string, column,norm, 1,3,1);
+				for(int kkk=0; kkk<2; ++kkk)
+				{
+					Cbn[index(3,iii,kkk)] = Cbn[index(3,iii,kkk)] - 0.5*norm[0]*Cbn[index(3,jjj,kkk )];
+					Cbn[index(3,jjj,kkk)] = Cbn[index(3,jjj,kkk)] - 0.5*norm[0]*Cbn[index(3,iii,kkk)];
+				}
 
-		for(int i=0; i<9; ++i)
-			Cbn[i] += (CEigWb[i] - EigWoC[i]) * h;
+			}
+		//по столбцам
+		for(int iii=0; iii < 3; ++iii)
+			for(int jjj=0; jjj < 3; ++jjj)
+			{
+				if(iii==jjj) continue;
+				Ldoub string[3] = {Cbn[index(3,0,iii)], Cbn[index(3,1,iii)], Cbn[index(3,2,iii)]};
+				Ldoub column[3] = {Cbn[index(3,0,jjj)], Cbn[index(3,1,jjj)], Cbn[index(3,2,jjj)]};
+				Ldoub norm[1];
+				MulMatrD(string, column,norm, 1,3,1);
+				for(int kkk=0; kkk<2; ++kkk)
+				{
+					Cbn[index(3,kkk,iii)] = Cbn[index(3,kkk,iii)] - 0.5*norm[0]*Cbn[index(3,kkk,jjj )];
+					Cbn[index(3,kkk,jjj)] = Cbn[index(3,kkk,jjj)] - 0.5*norm[0]*Cbn[index(3,kkk,iii)];
+				}
+
+			}
+#endif
+		
 		// вычисление углов ориентации через МНК (как в выставке)
-		Orientation[0] = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
-		Orientation[1] = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
-		double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
-		Orientation[2] = (double) atan2(Cbn[index(3, 2, 1)], c0);
-
-		// решение задачи навигации
-		MulMatrD(Cbn, Ab, Ao,3,3,1); // перепроектирование из связаных осей в навигационные
-		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi)) * h; //Vup
-#if 1
+		Orientation[0] = (Ldoub) atan2(Cbn[index(3, 0, 1)],Cbn[index(3, 1, 1)]);
+		Orientation[1] =  (Ldoub) - atan2(Cbn[index(3, 2, 0)],Cbn[index(3, 2, 2)]);
+		Ldoub c0 = (Ldoub) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+		Orientation[2] = (Ldoub) atan2(Cbn[index(3, 2, 1)],c0);
+		/*Проверка ре*/
+		
+		
+		/*Решение задачи навигации*/
+		MulMatrD(Cbn, Wp, Ao, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Ao -- уже не ускорения, а приращшение скоросетй
+		
 		//Кориолисовы добавки
-		double aCoriolis[3] = {0};
-		aCoriolis[0] =(double) ((double) omo[1]*V[2] - (double) omo[2]*V[1] + (double) U*Beo[index(3,1,2)]*V[2] - (double) U*Beo[index(3,2,2)]*V[1]);
-		aCoriolis[1] =(double) ((double) -omo[0]*V[2] + (double) omo[2]*V[0] + (double) U*Beo[index(3,2,2)]*V[0]);
-		aCoriolis[2] =(double) ((double) omo[0]*V[1] - (double) omo[1]*V[0] - (double) U*Beo[index(3,1,2)]*V[0]);
-
-		double V_dot[2] = {(double) Ao[0], (double) Ao[1] };
-
-		/*
-		V[0] += (double) (Ao[0] - aCoriolis[0]) * h; // Ve
-		V[1] += (double) (Ao[1] - aCoriolis[1]) * h; //Vn
-		//*/
-
-
-		///*
-		// умножение
-		TwoProduct(Ao[0] - aCoriolis[0], h, V_dot[0], Verr2[0]);
-		TwoProduct(Ao[1] - aCoriolis[1], h, V_dot[1], Verr2[1]);
-		// компенсация ошибок интегрирования ускорений
-		TwoSum(Verr2[0], V_dot[0], V_dot[0], Verr2[0], false);
-		TwoSum(Verr2[1], V_dot[1], V_dot[1], Verr2[1], false);
-		// сложение скоростей с предыдущего такта и только что проинтегрированных ускорений (приращения скоростей). Оценка погрешности этого сложения
-		TwoSum(V_dot[0], V[0], V[0], Verr1[0], false);
-		TwoSum(V_dot[1], V[1],  V[1], Verr1[1], false);
-		//Компенсация погрешности сложения скоростей с пред. такта и приращения скоростей на тек. такте
-		TwoSum(Verr1[0], V[0], V[0], Verr1[0], false);
-		TwoSum(Verr1[1], V[1],  V[1], Verr1[1], false);
-		//*/
-
-		CoordErr[0] +=(V[0] - V0[0]) * h;
-		CoordErr[1] +=(V[1] - V0[1]) * h;
-
-		/*printf("пересчитанное ускорение (0й элемент): %.20f\n", Ao[0]);
-		printf("Рассчитанное ускорение кориолиса: %.20f", aCoriolis[0]);
-		std::getc(stdin);*/
-#endif
-#if 1 // Пересчет радиусов сильно влияет на ошибки
-#if 0
-		double sqrSinErr {0}; //Ошибка возведения синуса в квадрат 
-		double sin2sin {0};
-
-		TwoProduct(sin(Coordinates[0]), sin(Coordinates[0]), sin2sin, sqrSinErr); 
-		TwoSum(sin2sin, sqrSinErr, sin2sin, sqrSinErr, false); //sin*sin
+		Ldoub aCoriolis[3] = {0};
+		aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
+		aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
+		aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[ 0])*V[0]);
+		/*Интегрирование Кориолиса методом Рунге-Кутты*/
+		double K[8]={0};//2 columns(aCoriolis_x, aCoriolis_y), 4 rows
+		for (int iii=0; iii<2; iii++)//rows
+			{
+				K[index(4,iii, 0)] = aCoriolis[iii]; //k1
+				K[index(4,iii, 1)] = aCoriolis[iii] + (h1/2.)*K[index(4,iii, 0)]; //k2
+				K[index(4,iii, 2)] = aCoriolis[iii] + (h1/2.)*K[index(4,iii, 1)]; //k3
+				K[index(4,iii, 3)] = aCoriolis[iii] + (h1/2.)*K[index(4,iii, 2)]; //k4
+				wCoriolis[iii] += (1./6)*(K[index(4,iii, 0)] + 2*K[index(4,iii, 1)] + 2*K[index(4,iii, 2)] + K[index(4,iii, 3)]);
+			}
 		
-		double e2Sin {0}; // e*e*sin*sin
-		double e2SinErr {0};
-		TwoProduct(E2E, sin2sin, e2Sin, e2SinErr); //// e*e*sin*sin
-		TwoSum(e2Sin, e2SinErr, e2Sin, e2SinErr, false); //e*e*sin*sin
-
-		e2SinErr = 0;
-		double oneE2Sin {0}; // 1 - e*e*sin*sin
-		TwoSum(1., -e2SinErr, oneE2Sin, e2SinErr, false);
-		TwoSum(oneE2Sin, e2SinErr, oneE2Sin, e2SinErr, false);
+		/*Вычисление линейных скоростей*/
+		V[0] = V[0] + Ao[0] - h*1*aCoriolis[0]; // Ve 
+		V[1] = V[1] + Ao[1] - h*1*aCoriolis[1]; // Vn 
+		//Старые значения ошибок по координатам
+		double oldCoordErr[2] = {CoordError[0], CoordError[1]};
+		//Ошибки по координатам в м
+		CoordError[0] += (V[0] - V0[0]) * h;
+		CoordError[1] += (V[1] - V0[1]) * h;
+		if (cur_time%2)
+		{
+			CoordError2[0] += (V[0] - V0[0]) * 2*h;
+			CoordError2[1] += (V[1] - V0[1]) * 2*h;
+		}
+		//Ошибки по скоростям, полученные дифференцированием ошибок по координатам
+		double Verr[2] = {0};
+		for(int iii=0; iii<2; ++iii)
+			Verr[iii] = (CoordError[iii] - oldCoordErr[iii])/h;
+	
+		Rlambda = (Ldoub) R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
+		Rphi = (Ldoub) R*(1. - pow(e,2))/(sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
 		
-		Rlambda = (double) R/sqrt(oneE2Sin);
-		Rphi = (double) R*(1 - e*e)/(sqrt(oneE2Sin) * (oneE2Sin));
-#endif
-
-#if 0
-		Rphi = (double) R*(1 - pow(e, 2))/(sqrt(1 - pow(e, 2) * pow(sin(Coordinates[0]), 2)) * (1 - pow(e, 2) * pow(sin(Coordinates[0]), 2) ));
-		Rlambda = (double) R/sqrt(1-pow(e, 2) * pow(sin(Coordinates[0]), 2));
-#endif
-#endif
-
 		// инкремент тактов
 		++cur_time;
-
 		// Запись в файл
-
+		
 		static FILE* navig_res;
 		if(!navig_res)
 		{
-			navig_res=fopen("/home/nikita_viksne/InertialNavigation/data/Nav_res.csv","wt");
+			navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
@@ -324,9 +556,13 @@ int main()
 			fprintf(navig_res, "Pitch;");
 			fprintf(navig_res, "d_E;");
 			fprintf(navig_res, "d_N;");
+			fprintf(navig_res, "d_VE;"); //Полученные дифференцированием ошибок по координатам
+			fprintf(navig_res, "d_VN;"); //Полученные дифференцированием ошибок по координатам
+			fprintf(navig_res, "d_E2;"); //Ошибка по координатам с огрубленной разрядной сеткой
+			fprintf(navig_res, "d_N2;"); //Ошибка по координатам с огрубленной разрядной сеткой
 			fprintf(navig_res, "\n");
 		}
-
+		
 		if(navig_res)
 		{
 			// Навигационные параметры
@@ -339,16 +575,21 @@ int main()
 			// Углы оориентации
 			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", Orientation[i]);
-
-			//Ошибки по координатам 
-			for(int iii=0; iii<2; ++iii)
-				fprintf(navig_res, "%.10e;", CoordErr[iii]);
+			//Ошибки по координатам в м
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", CoordError[i]);
+			//Ошибки по скоростям в м полученные дифференцированием координат
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", Verr[i]);
+			//Ошибки по координатам с огрубленной разрядной сеткой в м
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", CoordError2[i]);
+			
 			fprintf(navig_res, "\n");
 		}
 #endif
+		//fflush(navig_res);
 	}
-	printf("File end\n");
 	//getc(stdin);
 	return 0;
 }
-#endif

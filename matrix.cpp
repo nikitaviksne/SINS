@@ -1,54 +1,61 @@
-#include <std.h>
-#include <cmath>
+#include<std.h>
 #include "mathematics.h"
 #include <stdio.h>
 
-void MulMatrD(double *A, double *B, double *C, int size1, int size2, int size3)
+void MulMatrD(Ldoub *A, Ldoub *B, Ldoub *C, int size1, int size2, int size3)
 {
 	/*
-	 * A[size1*size2] @ B[size2*size3] = C[size1*size3]
-	 */
-	for (int i=0; i<size1; ++i) // Ð¿Ð¾ ÑÑ‚Ñ€Ð¾ÐºÐ°Ð¼ A
-		for(int j=0; j<size3; ++j) // Ð¿Ð¾ ÑÑ‚Ð¾Ð»Ð±Ñ†Ð°Ð¼ B
+	A[size1*size2] @ B[size2*size3] = C[size1*size3]
+	*/
+	for (int i=0; i<size1; ++i) // ïî ñòðîêàì A
+		for(int j=0; j<size3; ++j) // ïî ñòîëáöàì B
 		{
-			double sum=0;
-			double errProd=0;
-			double errSum=0;
-			for (int k=0; k<size2; ++k) // Ð¿Ð¾ ÑÑ‚Ð¾Ð»Ð±Ñ†Ð°Ð¼ A (Ð¿Ð¾ ÑÑ‚Ñ€Ð¾ÐºÐ°Ð¼ B)
+			Ldoub sum=0;
+			Ldoub errProd=0;
+			Ldoub errSum=0;
+			for (int k=0; k<size2; ++k) // ïî ñòîëáöàì A (ïî ñòðîêàì B)
 			{
-				#if 1
-				double tempRes=0;
-				// ÑƒÐ¼Ð½Ð¾Ð¶ÐµÐ½Ð¸Ðµ
+#if 1
+				Ldoub tempRes=0;
+				// óìíîæåíèå
 				TwoProduct(A[index(size2, i, k)], B[index(size3, k, j)], tempRes, errProd);
-				// Ð¡Ð»Ð¾Ð¶ÐµÐ½Ð¸Ðµ
+				// Ñëîæåíèå
 				TwoSum(sum, tempRes, sum, errSum, false);
-				// ÐšÐ¾Ð¼Ð¿ÐµÐ½ÑÐ°Ñ†Ð¸Ñ Ð½Ð°ÐºÐ¾Ð¿Ð»ÐµÐ½Ð½Ð¾Ð¹ Ð¾ÑˆÐ¸Ð±ÐºÐ¸
+				// Êîìïåíñàöèÿ íàêîïëåííîé îøèáêè
 				TwoSum(sum, errSum, sum, errSum, false);
-				#endif
-				//sum += (double) A[index(size2, i, k)] * (B[index(size3, k, j)]);
+#endif
+				//sum += (Ldoub) A[index(size2, i, k)] * (B[index(size3, k, j)]);
 			}
 			C[index(size3, i, j)] = sum;
 		}
 }
-void MatrOB(double H, double R, double P, double* C, int size)
+
+void Transpose(Ldoub *A, int size1)
 {
-	C[0] = (double) cos(R) * cos(H) + sin(R)*sin(H)* sin(P);
-	C[1] = (double) sin(R) * cos(H)*sin(P) - cos(R)*sin(H);
-	C[2] = (double) -sin(R) * cos(P);
-	C[3] = (double) cos(P) * sin(H);
-	C[4] = (double) cos(H) * cos(P);
-	C[5] = (double) sin(P);
-	C[6] = (double) sin(R) * cos(H) - cos(R) * sin(H) * sin(P);
-	C[7] = (double) -sin(R) * sin(H) - cos(R) * cos(H) * sin(P);
-	C[8] = (double) cos(R) * cos(P);
+	Ldoub buf;
+	for(int i=0; i<size1; ++i)
+		for(int j=0; j<size1; ++j)
+			if (i!=j)
+			{
+				buf = A[index(size1, i,j)];
+				A[index(size1, i,j)] = A[index(size1, j,i)];
+				A[index(size1, j,i)] = buf;
+			}
 }
 
-void print2dMatr(double* A, int size)
+void Transpose2M(Ldoub *A, Ldoub *B, int size1)
 {
-	for(int iii=0; iii<size; ++iii)
+	for(int i=0; i<size1; ++i)
+		for(int j=0; j<size1; ++j)
+				B[index(size1, i,j)] = A[index(size1, j,i)];
+}
+
+void print2dMatr(Ldoub* A, int rows, int cols)
+{
+	for(int iii=0; iii<rows; ++iii)
 	{
-		for(int jjj=0; jjj<size; ++jjj)
-			printf("%.20f\t", A[index(size, iii,jjj)]);
+		for(int jjj=0; jjj<cols; ++jjj)
+			printf("%.20f\t", A[index(cols, iii, jjj)]);
 		printf("\n");
 	}
 }
