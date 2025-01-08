@@ -1,10 +1,8 @@
-/*Τΰιλ ρ define*/
+/*Π¤Π°ΠΉΠ» Ρ define*/
 #ifndef STDH
 #define STDH
 
-#define index(cols, row, col) (row*cols + col)
+#define index_3(cols, row, col) (row*cols + col)
 #define Ldoub double
-
-
 
 #endif

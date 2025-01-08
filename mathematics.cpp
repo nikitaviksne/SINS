@@ -1,6 +1,6 @@
-#include "mathematics.h"
+#include "include/mathematics.h"
 #include <cmath>
-#include "std.h"
+#include "include/std.h"
 void TwoSum(Ldoub a, Ldoub b, Ldoub& res, Ldoub& err, bool isNull)
 {
 	/*a + b = res + err*/
