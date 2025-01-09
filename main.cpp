@@ -1,13 +1,12 @@
 #define _USE_MATH_DEFINES
 #include <stdio.h>
-#include "include/std.h"
-#include "include/matrix.h"
-#include "include/mathematics.h"
+#include "std.h"
+#include "matrix.h"
+#include "mathematics.h"
 #include <cmath>
 #include <fstream> //файловые потоки для чтения бинарного файла
-#include <QFile>
 #include <QDataStream>
-
+#include <QFile>
 
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 {
@@ -100,17 +99,17 @@ int main()
 	const Ldoub g = 9.81;
 	const Ldoub a = 6378245;
 	const Ldoub b = 6356856;
-	const Ldoub e = (Ldoub) sqrt(1 - b*b/a/a);
+	const Ldoub e = sqrt(1 - b*b/a/a);
 	const Ldoub R = 6400e3;
 	const Ldoub pi = 3.141592653589793;
 	const Ldoub U = 7.27220521664304e-05;
-	const Ldoub rad2deg = 180./M_PI; // из градусов в радианы в секунду
+	const Ldoub rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
 	const Ldoub deg2rad = 1./rad2deg;
 	int freq = 100; // частота измерений с инерциальных датчиков
 	Ldoub h = 0.01; //период дискретизации
 	int freq1 = 400; // частота свехбыстрого цикла
 	Ldoub h1 (1./400); // период дискретизации свехбыстрого цикла
-	int t_nav = 40*60; // время работы нав алгоритма в секундах
+	int t_nav = 180*60; // время работы нав алгоритма в секундах
 	int t_alignment = (int) 5*60*freq1; // время выставки в тактах
 	Ldoub Rlambda;
 	Ldoub Rphi;
@@ -139,31 +138,26 @@ int main()
 	Ldoub StdAb[3] = {0};
 	Ldoub StdOmb[3] = {0};
 	Ldoub Cbn[9] = {0};
-	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной сindexистемы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
-	Ldoub Cin[9] = {1., 0, 0, 0, 1., 0, 0, 0, 1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
+	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной системы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
+	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
+	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
+	Ldoub Err_V[3] = {0}; // ошибки по скоростям
 	// массивы для выходных значений
-	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up 
-	Ldoub V[3] = {V0[0], V0[1], V0[2]};
+	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
-	Ldoub CoordError2[2] = {0}; //Ошибки в м, с вдвойне грубой разрядной сеткой
 	Ldoub Orientation[3] = {0}; // Углы ориентации
 
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
-#if 0
-	printf("sizeof(float) = %d\n", sizeof(float));
-	printf("sizeof(double) = %d\n", sizeof(double));
-	printf("sizeof(long double) = %d\n", sizeof(long double));
-#endif
-	bool AllowBiasAcc = false;
-	bool AllowBiasGyr = true;
+
+	bool AllowBiasAcc = true;
+	bool AllowBiasGyr = false;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
-	Ldoub wCoriolis[2] = {0}; //Приращения скоростей от ускорения Кориолиса
 	
 	// Чтение из файла ускорений и угловых скоростей
 #if 1
@@ -207,7 +201,7 @@ int main()
 			}
 			// по алгебраическому дополнению
 			Ldoub res1=0, err1=0, res2=0, err2=0;
-			TwoProduct(Cbn[(3, 1, 1)], Cbn[index_3(3, 2, 2)], res1, err1);
+			TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 2)], res1, err1);
 			TwoProduct(Cbn[index_3(3, 2, 1)], Cbn[index_3(3, 1, 2)], res2, err2);
 			Cbn[index_3(3, 0, 0)] = (Ldoub) res1 + err1 + res2 + err2;
 			res1=0; err1=0; res2=0; err2=0;
@@ -359,13 +353,13 @@ int main()
 		{
 			Thet4[mmm] += 2./3*temp_res[mmm]; // после этого вектор Эйлера 
 		}
-		Ldoub EigThet[9] = {0, -Thet4[2], Thet4[1], Thet4[2], 0, -Thet4[0], -Thet4[1], Thet4[0], 0}; // кососиметрическая матрица вектора Эйлера
+		Ldoub EigThet[9] = {0, -Thet4[2], Thet4[1], Thet4[2], 0, -Thet4[0], -Thet4[1], Thet4[0], 0}; // кососиметрическая матрица верктора Эйлера
 		Ldoub EigThet2[9] = {0}; //квадрат кососиметрической матрицы вектора Эйлера
 		MulMatrD(EigThet, EigThet, EigThet2,3,3,3);
 		Ldoub absThet2 = pow(Thet4[0],2) + pow(Thet4[1],2) + pow(Thet4[2],2); // Квадрат модуля вектора Эйлера
 		//absThet2 = 3.970459053e-13;
 		
-		Ldoub dCbb[9] = {0}; //матрица перехода из связанной в связанную за 1 такт (4*h4)
+		Ldoub dCbb[9] = {0}; //матрица перехода их связанной в связанную за 1 такт (4*h4)
 		for (int iii=0; iii<3; ++iii)
 			for(int jjj=0; jjj<3; ++jjj)
 			{
@@ -378,7 +372,7 @@ int main()
 		MulMatrD(dCbb, Cib, tempCib, 3,3,3);
 		//переприсваивание Cib = tempCib идет ниже, вместе с Cin
 		
-		//Вычисление переносных, относительных и абсолютных угловых скоростей опорной системы координат
+		//Вычисление переносных, относительных и абсолютных угловых скорокстей опопрной системы координат
 		Omo[0] = (Ldoub) -V[1]/(Rphi + Coordinates[2]);
 		Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
 		Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(phi0); // phi0
@@ -504,35 +498,18 @@ int main()
 		Ldoub aCoriolis[3] = {0};
 		aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
 		aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
-		aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[ 0])*V[0]);
-		/*Интегрирование Кориолиса методом Рунге-Кутты*/
-		double K[8]={0};//2 columns(aCoriolis_x, aCoriolis_y), 4 rows
-		for (int iii=0; iii<2; iii++)//rows
-			{
-				K[index_3(4,iii, 0)] = aCoriolis[iii]; //k1
-				K[index_3(4,iii, 1)] = aCoriolis[iii] + (h1/2.)*K[index_3(4,iii, 0)]; //k2
-				K[index_3(4,iii, 2)] = aCoriolis[iii] + (h1/2.)*K[index_3(4,iii, 1)]; //k3
-				K[index_3(4,iii, 3)] = aCoriolis[iii] + (h1/2.)*K[index_3(4,iii, 2)]; //k4
-				wCoriolis[iii] += (1./6)*(K[index_3(4,iii, 0)] + 2*K[index_3(4,iii, 1)] + 2*K[index_3(4,iii, 2)] + K[index_3(4,iii, 3)]);
-			}
+		aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
 		
-		/*Вычисление линейных скоростей*/
-		V[0] = V[0] + Ao[0] - h*1*aCoriolis[0]; // Ve 
-		V[1] = V[1] + Ao[1] - h*1*aCoriolis[1]; // Vn 
-		//Старые значения ошибок по координатам
-		double oldCoordErr[2] = {CoordError[0], CoordError[1]};
+		V[0] = V[0] + Ao[0] - 1*aCoriolis[0]*h; // Ve 
+		V[1] = V[1] + Ao[1] - 1*aCoriolis[1]*h; //Vn 
+		
+		//Ошибки по скоростям
+		for (int iii=0; iii<2; ++iii)
+			Err_V[iii] = V[iii] - V0[iii];
+
 		//Ошибки по координатам в м
-		CoordError[0] += (V[0] - V0[0]) * h;
-		CoordError[1] += (V[1] - V0[1]) * h;
-		if (cur_time%2)
-		{
-			CoordError2[0] += (V[0] - V0[0]) * 2*h;
-			CoordError2[1] += (V[1] - V0[1]) * 2*h;
-		}
-		//Ошибки по скоростям, полученные дифференцированием ошибок по координатам
-		double Verr[2] = {0};
-		for(int iii=0; iii<2; ++iii)
-			Verr[iii] = (CoordError[iii] - oldCoordErr[iii])/h;
+		CoordError[0] += (V[0] - (Ldoub) Vabs*sin(H0)) * h;
+		CoordError[1] += (V[1] - (Ldoub) Vabs*cos(H0)) * h;
 	
 		Rlambda = (Ldoub) R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
 		Rphi = (Ldoub) R*(1. - pow(e,2))/(sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
@@ -555,12 +532,10 @@ int main()
 			fprintf(navig_res, "Heading;");
 			fprintf(navig_res, "Roll;");
 			fprintf(navig_res, "Pitch;");
+			fprintf(navig_res, "d_VE;");
+			fprintf(navig_res, "d_VN;");
 			fprintf(navig_res, "d_E;");
 			fprintf(navig_res, "d_N;");
-			fprintf(navig_res, "d_VE;"); //Полученные дифференцированием ошибок по координатам
-			fprintf(navig_res, "d_VN;"); //Полученные дифференцированием ошибок по координатам
-			fprintf(navig_res, "d_E2;"); //Ошибка по координатам с огрубленной разрядной сеткой
-			fprintf(navig_res, "d_N2;"); //Ошибка по координатам с огрубленной разрядной сеткой
 			fprintf(navig_res, "\n");
 		}
 		
@@ -576,22 +551,18 @@ int main()
 			// Углы оориентации
 			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", Orientation[i]);
+			//Ошибки по cкоростям в м/с
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", Err_V[i]);
 			//Ошибки по координатам в м
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", CoordError[i]);
-			//Ошибки по скоростям в м полученные дифференцированием координат
-			for(int i=0; i<2; ++i)
-				fprintf(navig_res, "%.10e;", Verr[i]);
-			//Ошибки по координатам с огрубленной разрядной сеткой в м
-			for(int i=0; i<2; ++i)
-				fprintf(navig_res, "%.10e;", CoordError2[i]);
 			
 			fprintf(navig_res, "\n");
 		}
 #endif
-		//fflush(navig_res);
+		fflush(navig_res);
 	}
 	//getc(stdin);
-	printf("Ошибка по координатам = %.20f", CoordError2[0]);
 	return 0;
 }

@@ -24,7 +24,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Widgets finds its own dependencies.
-find_package(Qt5Core REQUIRED)
+find_package(Qt5Widgets REQUIRED)
 
 add_executable(main main.cpp)
 
