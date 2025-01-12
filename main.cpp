@@ -116,10 +116,10 @@ int main()
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
-	Ldoub H0 = (Ldoub) (50.)*deg2rad;
+	Ldoub H0 = (Ldoub) (0.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 0;
+	Ldoub Vabs = 30;
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
@@ -161,7 +161,7 @@ int main()
 	
 	// Чтение из файла ускорений и угловых скоростей
 #if 1
-	QFile file("/home/nikita_viksne/Modelling_sensetive_elements/Data_files/data_acc_static_state_heading_50_freq_400.csv");
+	QFile file("/home/nikita_viksne/Modelling_sensetive_elements/Data_files/data_acc_veloc_30_heading_0_freq_400.csv");
 	file.open(QIODevice::ReadOnly);
 	QDataStream in(&file);
 	in.setByteOrder(QDataStream::LittleEndian);
