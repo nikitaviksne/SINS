@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys #для приема имени файла для построения через аргумент команды
 
-data =pd.read_csv("~/InertialNavigation/data/Nav_res.csv", delimiter=";");
+relative_path = sys.argv[1]
+data =pd.read_csv("~/InertialNavigation/data/"+relative_path, delimiter=";");
 
 time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
 

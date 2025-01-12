@@ -151,7 +151,7 @@ int main()
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = true;
+	bool AllowBiasAcc = false;
 	bool AllowBiasGyr = false;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
