@@ -93,7 +93,7 @@ void GeneratedSens(Ldoub *Ab, Ldoub *Omb, Ldoub Vabs, Ldoub H0, int cur_time, in
 	MulMatrD(Cnb, Omo, Omb, 3, 3, 1); // проекция угловых скоростей на связанные оси
 }
 #endif
-int main()
+int main(int argc, char *argv[])
 {
 	 //инициализация необходимых переменных и констант
 	const Ldoub g = 9.81;
@@ -119,7 +119,7 @@ int main()
 	Ldoub H0 = (Ldoub) (0.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 30;
+	Ldoub Vabs = 0;
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
@@ -161,7 +161,7 @@ int main()
 	
 	// Чтение из файла ускорений и угловых скоростей
 #if 1
-	QFile file("/home/nikita_viksne/Modelling_sensetive_elements/Data_files/data_acc_veloc_30_heading_0_freq_400.csv");
+	QFile file(argv[1]);
 	file.open(QIODevice::ReadOnly);
 	QDataStream in(&file);
 	in.setByteOrder(QDataStream::LittleEndian);
