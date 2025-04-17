@@ -6,4 +6,6 @@ void Transpose(Ldoub *, int);
 void Transpose2M(Ldoub *, Ldoub *, int);
 void print2dMatr(Ldoub*, int, int);
 
+bool invers(int size,float *a);
+bool inversD(int size,Ldoub *a);
 #endif

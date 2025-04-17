@@ -1,5 +1,5 @@
-#include "include/std.h"
-#include "include/mathematics.h"
+#include "std.h"
+#include "mathematics.h"
 #include <stdio.h>
 
 void MulMatrD(Ldoub *A, Ldoub *B, Ldoub *C, int size1, int size2, int size3)
@@ -58,4 +58,76 @@ void print2dMatr(Ldoub* A, int rows, int cols)
 			printf("%.20f\t", A[index_3(cols, iii, jjj)]);
 		printf("\n");
 	}
+}
+
+bool invers(int size,float *a)
+{
+/*Взял из ArmPsi*/
+   float p,y,*a1,*b1,*c1;
+   int i,j,k;
+   for (k=0;k<size;k++){
+	  if(a[0]<=0){
+		 return false;
+	  }
+	  p=1/a[0];
+	  a1=a+size*(size-1);
+	  b1=a+1;
+	  for(i=1;i<size;i++)*a1++=*b1++;
+	  for (i=0;i<size-1;i++){
+		 y=-a[index_3(size,size-1,i)]*p;
+		 a[index_3(size,i,size-1)]=y;
+		 a1=a+size*i+i;
+		 b1=a+size*(i+1)+(i+1);
+		 c1=a+size*(size-1)+i;
+		 for (j=i;j<size-1;j++)*a1++=(*b1++)+(*c1++)*y;
+	  }
+	  a[index_3(size,size-1,size-1)]=-p;
+   }
+   for (i=0;i<size;i++){
+	  a1=a+size*i+i;
+	  b1=a1;
+	  for (j=i;j<size;j++){
+		 *a1=-(*a1);
+		 *b1=*a1++;
+		 b1+=size;
+	  }
+   }
+   return true;
+}
+
+bool inversD(int size,Ldoub *a)
+{
+/*Взял из ArmPsi*/
+   Ldoub p,y,*a1,*b1,*c1;
+   int i,j,k;
+   for (k=0;k<size;k++){
+      if(a[0]<=0){
+         return false;
+      }
+      p = 1/a[0]; //p = D_DIV(Constant_1,a[0]);
+      a1 = a+size*(size-1);
+      b1 = a+1;
+      for(i=1;i<size;i++)*a1++=*b1++;
+      for (i=0;i<size-1;i++){
+         y= - a[index_3(size,size-1,i)]*p;        // y=D_MINUS(D_MUL(a[index_3(size,size-1,i)],p));
+         a[index_3(size,i,size-1)]=y;
+         a1=a+size*i+i;
+         b1=a+size*(i+1)+(i+1);
+         c1=a+size*(size-1)+i;
+         for (j=i;j<size-1;j++)
+		*a1 ++= (*b1++) + (*c1++) * y;
+//*a1++=D_ADD((*b1++),D_MUL((*c1++),y));
+      }
+      a[index_3(size,size-1,size-1)]=-(p);
+   }
+   for (i=0;i<size;i++){
+      a1=a+size*i+i;
+      b1=a1;
+      for (j=i;j<size;j++){
+         *a1= - *a1;
+         *b1 = *a1++;
+         b1 += size;
+      }
+   }
+   return true;
 }

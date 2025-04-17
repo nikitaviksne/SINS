@@ -8,6 +8,9 @@
 #include <QDataStream>
 #include <QFile>
 
+//#define dev //для разработки и отладки
+
+
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 {
 	C[0] = (Ldoub) cos(R) * cos(H) + sin(R)*sin(H)* sin(P);
@@ -119,7 +122,7 @@ int main(int argc, char *argv[])
 	Ldoub H0 = (Ldoub) (0.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 0;
+	Ldoub Vabs = 30;
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
@@ -255,7 +258,7 @@ int main(int argc, char *argv[])
 
 		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
 
-		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равентсов нестрогое
+		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			#if 1
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, Ab, Omb); //чтение из файла
@@ -404,6 +407,48 @@ int main(int argc, char *argv[])
 			Cib[ii] = tempCib[ii];
 			Cin[ii] = tempCin[ii];
 		}
+
+
+#ifdef dev //dev --- develop, разработка, отладка
+		
+		printf("%d:\t столбцы:\n",cur_time);
+		//Проверяем выполняются ли свойства матрицы направляющих косинусов
+		//Скалярное произведение столбцов
+		Ldoub Prodij (0.); //результат произведения столбцов МНК
+		for (int kkk=0; kkk<3; kkk++)
+		{
+			Ldoub ci[3] = {Cib[index_3(3, kkk, 0)], Cib[index_3(3, kkk, 1)], Cib[index_3(3, kkk, 2)]};
+			for (int iii=0; iii<3; iii++)
+			{
+				Ldoub cj[3];
+				for (int jjj=0; jjj<3; jjj++)
+				{
+					cj[jjj] = Cib[index_3(3, iii, jjj)];
+				}
+				MulMatrD(ci, cj, &Prodij, 1,3,1);
+				printf("%d * %d = %.8f\n",kkk, iii, Prodij);
+			}
+		}
+		//Скалярное произведение строк	
+		printf("%d:\t строки:\n",cur_time);
+		Prodij=0.; //результат произведения строк МНК
+		for (int kkk=0; kkk<3; kkk++)
+		{
+			Ldoub ci[3] = {Cib[index_3(3, 0, kkk)], Cib[index_3(3, 1, kkk)], Cib[index_3(3, 2, kkk)]};
+			for (int iii=0; iii<3; iii++)
+			{
+				Ldoub cj[3];
+				for (int jjj=0; jjj<3; jjj++)
+				{
+					cj[jjj] = Cib[index_3(3, jjj, iii)];
+				}
+				MulMatrD(ci, cj, &Prodij, 1,3,1);
+				printf("%d * %d = %.8f\n",kkk, iii, Prodij);
+			}
+		}
+#endif
+
+
 #if 0
 		//Шаманим с матрицей body
 		MatrOB(Thet4[2], Thet4[1], Thet4[0], Cib, 3);
@@ -521,7 +566,10 @@ int main(int argc, char *argv[])
 		static FILE* navig_res;
 		if(!navig_res)
 		{
-			navig_res=fopen("./data/Nav_res.csv","wt");
+			if (argc == 3) //если аргументом передан файл для записи результатов, записываем в него
+					navig_res=fopen(argv[2],"wt");
+			else // если нет, записываем в файл по умолчанию
+				navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
