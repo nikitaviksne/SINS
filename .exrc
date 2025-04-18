@@ -1,2 +1,2 @@
-set wrapmargin=10
+set wrapmargin=10000
 syntax on

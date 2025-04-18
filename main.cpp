@@ -7,6 +7,9 @@
 #include <fstream> //файловые потоки для чтения бинарного файла
 #include <QDataStream>
 #include <QFile>
+#include "alignment.h"
+#include "SolveOrient.h"
+#include "SolveNav.h"
 
 //#define dev //для разработки и отладки
 
@@ -119,7 +122,7 @@ int main(int argc, char *argv[])
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
-	Ldoub H0 = (Ldoub) (0.)*deg2rad;
+	Ldoub H0 = (Ldoub) (50.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
 	Ldoub Vabs = 30;
@@ -187,34 +190,9 @@ int main(int argc, char *argv[])
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, Ab, Omb); //чтение из файла
 			#endif
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
-			for(int i=0; i<3; ++i)
-			{
-				// применяем метод Уэлфорда
-				MeanAb[i] = (Ldoub) MeanAb[i] + (Ab[i] - MeanAb[i]) / (cur_time + 1); //(cur_time * MeanAb[i] + Ab[i])/(cur_time + 1);
-				StdAb[i] = (Ldoub) (1 - 1/(cur_time + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(cur_time + 1);
-				MeanOmb[i] = (Ldoub) MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (cur_time + 1);//(cur_time * MeanOmb[i] + Omb[i])/(cur_time + 1);
-				StdOmb[i] = (Ldoub) (1 - 1/(cur_time + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(cur_time + 1);
-			}
-			//Вычисление (ориентации) матрицы перехода Cbn = [c00, c01, c02, c10, c11, c12, c20, c21, c22]
-			// Ищем обратную (транспонированную) матрицу
-			for(int i=0; i<3; ++i)
-			{
-				Cbn[index_3(3, 2, i)] = (Ldoub) MeanAb[i] / g;
-				Cbn[index_3(3, 1, i)] = (Ldoub) (MeanOmb[i]/ U - MeanAb[i]/g*sin(phi0))/cos(phi0);
-			}
-			// по алгебраическому дополнению
-			Ldoub res1=0, err1=0, res2=0, err2=0;
-			TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 2)], res1, err1);
-			TwoProduct(Cbn[index_3(3, 2, 1)], Cbn[index_3(3, 1, 2)], res2, err2);
-			Cbn[index_3(3, 0, 0)] = (Ldoub) res1 + err1 + res2 + err2;
-			res1=0; err1=0; res2=0; err2=0;
-			TwoProduct( Cbn[index_3(3, 1, 2)], Cbn[index_3(3, 2, 0)], res1, err1);
-			TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 2)], res2, err2);
-			Cbn[index_3(3, 0, 1)] = (Ldoub) res1 + err1 - (res2 + err2);
-			res1=0; err1=0; res2=0; err2=0;
-			TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 1)], res1, err1);
-			TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 0)], res2, err2);
-			Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
+
+			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);			
+
 			++cur_time; // для 400 Гц
 			/*
 			printf("Mean Omb\n");
@@ -333,234 +311,19 @@ int main(int argc, char *argv[])
 		}		
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации
-		Ldoub Thet4[3] = {0}; //Вектор Эйлера
-		for (int mmm=0; mmm<3; ++mmm)
-			for (int kkk=0; kkk<4; ++kkk)
-		{
-			Thet4[mmm] += alpha[index_3(4, mmm, kkk)];
-		}
-		//Для вектора Эйлера необходимо векторное умножение
-		Ldoub al_1_2[3] = {0};
-		Ldoub al_3_4[3] = {0};
-		for (int iii=0; iii<3; ++iii)
-			for (int jjj=0; jjj<2; ++jjj)
-			{
-				al_1_2[iii] += alpha[index_3(4, iii, jjj)];
-				al_3_4[iii] += alpha[index_3(4, iii, 3-jjj)];
-			}
-		Ldoub al_1_2_eig[9] = {0, -al_1_2[2], al_1_2[1], al_1_2[2], 0, -al_1_2[0], -al_1_2[1], al_1_2[0], 0};
-		Ldoub temp_res[3] = {0};
-		MulMatrD(al_1_2_eig, al_3_4, temp_res, 3, 3, 1);
-		
-		for (int mmm=0; mmm<3; ++mmm)
-		{
-			Thet4[mmm] += 2./3*temp_res[mmm]; // после этого вектор Эйлера 
-		}
-		Ldoub EigThet[9] = {0, -Thet4[2], Thet4[1], Thet4[2], 0, -Thet4[0], -Thet4[1], Thet4[0], 0}; // кососиметрическая матрица верктора Эйлера
-		Ldoub EigThet2[9] = {0}; //квадрат кососиметрической матрицы вектора Эйлера
-		MulMatrD(EigThet, EigThet, EigThet2,3,3,3);
-		Ldoub absThet2 = pow(Thet4[0],2) + pow(Thet4[1],2) + pow(Thet4[2],2); // Квадрат модуля вектора Эйлера
-		//absThet2 = 3.970459053e-13;
-		
-		Ldoub dCbb[9] = {0}; //матрица перехода их связанной в связанную за 1 такт (4*h4)
-		for (int iii=0; iii<3; ++iii)
-			for(int jjj=0; jjj<3; ++jjj)
-			{
-				if (iii==jjj)
-					dCbb[index_3(3,iii,jjj)] = 1 - (1 - absThet2/6.)*EigThet[index_3(3,iii,jjj)] + (0.5 - absThet2/24.)*EigThet2[index_3(3,iii,jjj)];
-				else
-					dCbb[index_3(3,iii,jjj)] = 0 - (1 - absThet2/6.)*EigThet[index_3(3,iii,jjj)] + (0.5 - absThet2/24.)*EigThet2[index_3(3,iii,jjj)];
-			}
-		Ldoub tempCib[9] = {0};
-		MulMatrD(dCbb, Cib, tempCib, 3,3,3);
-		//переприсваивание Cib = tempCib идет ниже, вместе с Cin
-		
-		//Вычисление переносных, относительных и абсолютных угловых скорокстей опопрной системы координат
-		Omo[0] = (Ldoub) -V[1]/(Rphi + Coordinates[2]);
-		Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
-		Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(phi0); // phi0
-		Ldoub omo[3] = {(Ldoub) Omo[0], (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]), (Ldoub) Omo[2] + (Ldoub) U*sin(Coordinates[0])};// phi0
-		Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
-		Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
-		Coordinates[2] += (Ldoub) (V[2])/freq;
-		//Ldoub EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
-		Ldoub EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
-		//Ldoub EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
-		Ldoub EigWo2[9]={0};//квадрат кососиметрической матрицы абсолютной голвой скорости опорной с.к
-		
-		MulMatrD(EigWo, EigWo, EigWo2, 3, 3, 3);
-
-		Ldoub tempCin[9] = {0};
-		Ldoub dCnn[9] = {0};
-		for (int iii=0; iii<3; ++iii)
-			for(int jjj=0; jjj<3; ++jjj)
-			{
-				if (iii==jjj)
-					dCnn[index_3(3,iii,jjj)] = 1 - h*EigWo[index_3(3,iii,jjj)] + pow(h,2)*EigWo2[index_3(3,iii,jjj)]/2. ;
-				else
-					dCnn[index_3(3,iii,jjj)] = 0 - h*EigWo[index_3(3,iii,jjj)] + pow(h,2)*EigWo2[index_3(3,iii,jjj)]/2. ;
-			}
-		//Cin = dCnn * Cin	
-		MulMatrD(dCnn, Cin, tempCin, 3, 3, 3);
-		for (int ii=0; ii<9; ii++) 
-		{
-			Cib[ii] = tempCib[ii];
-			Cin[ii] = tempCin[ii];
-		}
-
-
-#ifdef dev //dev --- develop, разработка, отладка
-		
-		printf("%d:\t столбцы:\n",cur_time);
-		//Проверяем выполняются ли свойства матрицы направляющих косинусов
-		//Скалярное произведение столбцов
-		Ldoub Prodij (0.); //результат произведения столбцов МНК
-		for (int kkk=0; kkk<3; kkk++)
-		{
-			Ldoub ci[3] = {Cib[index_3(3, kkk, 0)], Cib[index_3(3, kkk, 1)], Cib[index_3(3, kkk, 2)]};
-			for (int iii=0; iii<3; iii++)
-			{
-				Ldoub cj[3];
-				for (int jjj=0; jjj<3; jjj++)
-				{
-					cj[jjj] = Cib[index_3(3, iii, jjj)];
-				}
-				MulMatrD(ci, cj, &Prodij, 1,3,1);
-				printf("%d * %d = %.8f\n",kkk, iii, Prodij);
-			}
-		}
-		//Скалярное произведение строк	
-		printf("%d:\t строки:\n",cur_time);
-		Prodij=0.; //результат произведения строк МНК
-		for (int kkk=0; kkk<3; kkk++)
-		{
-			Ldoub ci[3] = {Cib[index_3(3, 0, kkk)], Cib[index_3(3, 1, kkk)], Cib[index_3(3, 2, kkk)]};
-			for (int iii=0; iii<3; iii++)
-			{
-				Ldoub cj[3];
-				for (int jjj=0; jjj<3; jjj++)
-				{
-					cj[jjj] = Cib[index_3(3, jjj, iii)];
-				}
-				MulMatrD(ci, cj, &Prodij, 1,3,1);
-				printf("%d * %d = %.8f\n",kkk, iii, Prodij);
-			}
-		}
-#endif
-
-
-#if 0
-		//Шаманим с матрицей body
-		MatrOB(Thet4[2], Thet4[1], Thet4[0], Cib, 3);
-#endif
-#if 0
-		//Шаманим с матрицей o, она же n
-		MatrOB(Omo[2], Omo[1], Omo[0], Cin, 3); // если Omo, то ошибки по углам на уровне 1е-11
-#endif
-		Ldoub Cbi[9] = {0};
-		Transpose2M(Cib, Cbi, 3);//транспонированная матрица Cbi
-		
-		// Решение уравнения Пуассона
-		MulMatrD(Cin, Cbi, Cbn, 3,3,3);
-#if 0
-		for (int iii=0; iii<3; ++iii)
-			for(int jjj=0; jjj<3; ++jjj)
-				if (iii==jjj) Cbn[index_3(3, iii,jjj)] = 1;
-				else Cbn[index_3(3, iii,jjj)] = 0;
-#endif
-		/*Процедура нормирования и ортогонализации*/
-#if 0
-		//контроль масштаба
-		//Строки
-		for (int iii=0; iii<3; ++iii)
-			{
-				Ldoub string[3] = {Cbn[index_3(3,iii,0)], Cbn[index_3(3,iii,1)], Cbn[index_3(3,iii,2)]};
-				Ldoub norm[1];
-				MulMatrD(string, string, norm, 1,3,1);
-				norm[0] = 1 - norm[0];
-				for (int jjj=0; jjj < 3; ++jjj)
-					Cbn[index_3(3,iii,jjj)] = Cbn[index_3(3,iii,jjj)]  - 0.5*norm[0]*Cbn[index_3(3,iii,jjj)];
-			}
-		//Столбцы
-		for (int iii=0; iii<3; ++iii)
-			{
-				Ldoub string[3] = {Cbn[index_3(3,0,iii)], Cbn[index_3(3,1,iii)], Cbn[index_3(3,2,iii)]};
-				Ldoub norm[1];
-				MulMatrD(string, string, norm, 1,3,1);
-				norm[0] = 1 - norm[0];
-				for (int jjj=0; jjj < 3; ++jjj)
-					Cbn[index_3(3,jjj,iii)] = Cbn[index_3(3,jjj,iii)]  - 0.5*norm[0]*Cbn[index_3(3,jjj,iii)];
-			}
-#endif
-#if 0
-		// ортогонализация
-		//по строкам
-		for(int iii=0; iii < 3; ++iii)
-			for(int jjj=0; jjj < 3; ++jjj)
-			{
-				if(iii==jjj) continue;
-				Ldoub string[3] = {Cbn[index_3(3,iii,0)], Cbn[index_3(3,iii,1)], Cbn[index_3(3,iii,2)]};
-				Ldoub column[3] = {Cbn[index_3(3,jjj,0)], Cbn[index_3(3,jjj,1)], Cbn[index_3(3,jjj,2)]};
-				Ldoub norm[1];
-				MulMatrD(string, column,norm, 1,3,1);
-				for(int kkk=0; kkk<2; ++kkk)
-				{
-					Cbn[index_3(3,iii,kkk)] = Cbn[index_3(3,iii,kkk)] - 0.5*norm[0]*Cbn[index_3(3,jjj,kkk )];
-					Cbn[index_3(3,jjj,kkk)] = Cbn[index_3(3,jjj,kkk)] - 0.5*norm[0]*Cbn[index_3(3,iii,kkk)];
-				}
-
-			}
-		//по столбцам
-		for(int iii=0; iii < 3; ++iii)
-			for(int jjj=0; jjj < 3; ++jjj)
-			{
-				if(iii==jjj) continue;
-				Ldoub string[3] = {Cbn[index_3(3,0,iii)], Cbn[index_3(3,1,iii)], Cbn[index_3(3,2,iii)]};
-				Ldoub column[3] = {Cbn[index_3(3,0,jjj)], Cbn[index_3(3,1,jjj)], Cbn[index_3(3,2,jjj)]};
-				Ldoub norm[1];
-				MulMatrD(string, column,norm, 1,3,1);
-				for(int kkk=0; kkk<2; ++kkk)
-				{
-					Cbn[index_3(3,kkk,iii)] = Cbn[index_3(3,kkk,iii)] - 0.5*norm[0]*Cbn[index_3(3,kkk,jjj )];
-					Cbn[index_3(3,kkk,jjj)] = Cbn[index_3(3,kkk,jjj)] - 0.5*norm[0]*Cbn[index_3(3,kkk,iii)];
-				}
-
-			}
-#endif
-		
-		// вычисление углов ориентации через МНК (как в выставке)
-		Orientation[0] = (Ldoub) atan2(Cbn[index_3(3, 0, 1)],Cbn[index_3(3, 1, 1)]);
-		Orientation[1] =  (Ldoub) - atan2(Cbn[index_3(3, 2, 0)],Cbn[index_3(3, 2, 2)]);
-		Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
-		Orientation[2] = (Ldoub) atan2(Cbn[index_3(3, 2, 1)],c0);
-		/*Проверка ре*/
-		
+		Ldoub omo[3] = {0}; //переносные угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
+		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, Rphi, Rlambda, freq, h, U, cur_time); //из одноименного заголовочного файла
 		
 		/*Решение задачи навигации*/
-		MulMatrD(Cbn, Wp, Ao, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Ao -- уже не ускорения, а приращшение скоросетй
-		
-		//Кориолисовы добавки
-		Ldoub aCoriolis[3] = {0};
-		aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
-		aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
-		aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
-		
-		V[0] = V[0] + Ao[0] - 1*aCoriolis[0]*h; // Ve 
-		V[1] = V[1] + Ao[1] - 1*aCoriolis[1]*h; //Vn 
-		
-		//Ошибки по скоростям
-		for (int iii=0; iii<2; ++iii)
-			Err_V[iii] = V[iii] - V0[iii];
-
-		//Ошибки по координатам в м
-		CoordError[0] += (V[0] - (Ldoub) Vabs*sin(H0)) * h;
-		CoordError[1] += (V[1] - (Ldoub) Vabs*cos(H0)) * h;
-	
-		Rlambda = (Ldoub) R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
-		Rphi = (Ldoub) R*(1. - pow(e,2))/(sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
-		
+		SolveNav(Wp, Cbn,  Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0 );
 		// инкремент тактов
 		++cur_time;
+		
+		/*
+		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
+		*/	
+
+
 		// Запись в файл
 		
 		static FILE* navig_res;

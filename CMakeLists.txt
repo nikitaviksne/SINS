@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.10)
 
-project("Inertial_algorithm")
+project("Inertial_algorithm" LANGUAGES CXX)
 
 set(SRCS
     mathematics.cpp
@@ -16,6 +16,26 @@ set(SOURCE_LIB
 add_library(lclib STATIC ${SRCS})
 target_include_directories(lclib PUBLIC "include")
 
+# Библиотека с алгоритмами БИНС
+set(Headers_SINS 
+	SINS_Algorithms/
+	include/
+	)
+#message(STATUS Headers_SINS, ${Headers_SINS})
+set(Source_SINS 
+		SINS_Algorithms/alignment.cpp
+		SINS_Algorithms/SolveOrient.cpp
+		SINS_Algorithms/SolveNav.cpp
+		mathematics.cpp
+		matrix.cpp
+	)
+
+#message(STATUS Source_SINS, ${Source_SINS})
+
+add_library(ins STATIC ${Source_SINS})
+
+target_include_directories(ins PUBLIC ${Headers_SINS})
+
 # Tell CMake to run moc when necessary:
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -30,4 +50,5 @@ add_executable(main main.cpp)
 
 qt5_use_modules(main Core)
 
-target_link_libraries(main lclib)
+target_link_libraries(main lclib ins)
+
