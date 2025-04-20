@@ -1,5 +1,6 @@
 #ifndef MATRIXH
 #define MATRIXH
+#include "std.h"
 
 void MulMatrD(Ldoub *A, Ldoub *B, Ldoub *C, int size1, int size2, int size3);
 void Transpose(Ldoub *, int);
