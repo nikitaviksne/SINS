@@ -3,16 +3,17 @@
 #include "matrix.h"
 #include "mathematics.h"
 #include <cmath>
-#include <fstream> //файловые потоки для чтения бинарного файла
-//#include <QDataStream>
-//#include <QFile>
+#include <fstream> //файловые потоки для чтения бинарного файла библиотека C++
+#include <QDataStream>
+#include <QFile>
 #include "alignment.h"
 #include "SolveOrient.h"
 #include "SolveNav.h"
-#include "ap.h"
-#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
+//#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
 #define _USE_MATH_DEFINES
 //#define dev //для разработки и отладки
+
+#include <QDebug>
 
 
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
@@ -27,7 +28,69 @@ void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 	C[7] = (Ldoub) -sin(R) * sin(H) - cos(R) * cos(H) * sin(P);
 	C[8] = (Ldoub) cos(R) * cos(P);
 }
-#if 0
+
+bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
+{//Чтение файла с помощью fstream
+	// Чтение из файла ускорений и угловых скоростей
+	if (is.read((char *) &Ab[0], sizeof(double))) //пока считывается первое измерение (ускорение по оси Xb)
+	{
+		//Заканчиваю считывать показания акселерометров
+		for (int jjj=1; jjj<3; ++jjj)
+			is.read((char *) &Ab[jjj], sizeof(double));
+
+		//Считываю показания ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &Omb[jjj], sizeof(double));
+		
+		Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
+		Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
+		Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
+		Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
+		
+		//Считываю показания постоянных смещений нуля акселерометров
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &BiasAb[jjj], sizeof(double));
+
+		//Считываю показания постоянных смещений нуля ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &BiasOmb[jjj], sizeof(double));
+
+		//Считываю показания случайных смещений нуля акселерометров
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &RandAb[jjj], sizeof(double));
+
+		//Считываю показания случайных смещений нуля ДУС
+		for (int jjj=0; jjj<3; ++jjj)
+			is.read((char *) &RandOmb[jjj], sizeof(double));
+
+		//добавление дрейфов к показаниям
+		for (int ii=0; ii<3; ++ii)
+		{
+			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
+			Omb[ii] += AllowBiasGyr*BiasAb[ii] + AllowRandGyr*RandOmb[ii];
+		}
+
+		//Считываем идеальные скорости от GPS
+		for (int iii =0; iii<2; ++iii)
+			is.read((char *) &Vgps[iii], sizeof(double));
+		
+		// Считываем шум скорости от GPS (с нулевым средним)
+		Ldoub RandomVgps[2] = {0};
+		for (int iii =0; iii<2; ++iii)
+		{
+			is.read((char *) &RandomVgps[iii], sizeof(double));
+			//Добавление шума к показаниям по скорости
+			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii];
+		}
+	}
+	else
+	{//формирую признак конца файла
+		return false;
+	}
+	return true;
+}
+
+#if 1
 void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
 {
 
@@ -68,11 +131,11 @@ void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowR
 	}
 
 	//Считываем идеальные скорости от GPS
-	Ldoub RandomVgps[2] = {0};
 	for (int iii =0; iii<2; ++iii)
 		in >> Vgps[iii];
 	
 	// Считываем шум скорости от GPS (с нулевым средним)
+	Ldoub RandomVgps[2] = {0};
 	for (int iii =0; iii<2; ++iii)
 	{
 		in >> RandomVgps[iii];
@@ -138,10 +201,10 @@ int main(int argc, char *argv[])
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
-	Ldoub H0 = (Ldoub) (50.)*deg2rad;
+	Ldoub H0 = (Ldoub) (0.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 30;
+	Ldoub Vabs = 0;
 	Ldoub Vgps[2] = {0};
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
@@ -184,7 +247,7 @@ int main(int argc, char *argv[])
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
 	
 	// Чтение из файла ускорений и угловых скоростей
-#if 0
+#if 1
 	QFile file(argv[1]);
 	file.open(QIODevice::ReadOnly);
 	QDataStream in(&file);
@@ -195,11 +258,13 @@ int main(int argc, char *argv[])
 	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
 	fscanf(file, "%*s;");
 #endif
+	//std::ifstream in(argv[1], std::ios::binary);
+
 	Ldoub resultV[2] = {0};
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
 	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
 
-	AdaptiveKalman filter(7, 3); //Создаю объект Адаптивного фильтра Калмана с матрицей размера 7*7 и измерениями 3*1 (вертикальную скорость тоже учитываю)
+	//AdaptiveKalman filter(7, 3); //Создаю объект Адаптивного фильтра Калмана с матрицей размера 7*7 и измерениями 3*1 (вертикальную скорость тоже учитываю)
 	Ldoub x0[2] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[7*3] = {0}; //матрица наблюдения
 	H[index_3(3, 0, 0)] = 1;
@@ -209,14 +274,13 @@ int main(int argc, char *argv[])
 	Ldoub q[7*7] = {0};
 
 	
-	while( true /*!( in.atEnd() )*/)// && ((cur_time <= (int) 30*60*freq ) ||  AlignmentContinue ))	
+	while( ! in.atEnd()/*ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps)*/) // Пока возможно чтение из файла
 	{
+		ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
+		//qDebug() << Ab[0] << Ab[1] << Ab[2] << Vgps[0] << Vgps[1];	
 		// этап выставки
 		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
-			#if 0
-			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из файла
-			#endif
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);			
@@ -266,9 +330,6 @@ int main(int argc, char *argv[])
 
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
-			#if 0
-			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из файла
-			#endif
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
 			for (int iii=0; iii<3; ++iii)
@@ -350,7 +411,7 @@ int main(int argc, char *argv[])
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
-	#if 1
+	#if 0
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
 		// Delta dot V_ox
 		filter.A[0] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]) - V[2]/(R+Coordinates[2]);
@@ -472,6 +533,5 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 	}
-	//getc(stdin);
 	return 0;
 }
