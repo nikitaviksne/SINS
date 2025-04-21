@@ -86,11 +86,11 @@ target_include_directories(kalman PUBLIC ${Headers_Kalman})
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Widgets finds its own dependencies.
-find_package(Qt5Widgets REQUIRED) #Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
+#find_package(Qt5Widgets REQUIRED) #Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
 add_executable(main main.cpp)
 
-qt5_use_modules(main Core) ##Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
+#qt5_use_modules(main Core) ##Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
 target_link_libraries(main 
 	lclib 
