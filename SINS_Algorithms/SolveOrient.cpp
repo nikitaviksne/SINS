@@ -8,7 +8,7 @@
 #include <stdio.h>
 #endif
 
-void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter)
+void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw)
 {
     Ldoub Thet4[3] = {0}; //Вектор Эйлера
 	for (int mmm=0; mmm<3; ++mmm)
@@ -140,69 +140,18 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 	Transpose2M(Cib, Cbi, 3);//транспонированная матрица Cbi
 		
 	// Решение уравнения Пуассона
-	MulMatrD(Cin, Cbi, Cbn, 3,3,3);
+	MulMatrD(Cin, Cbi, Cbn, 3, 3, 3);
 #if 0
 	for (int iii=0; iii<3; ++iii)
 		for(int jjj=0; jjj<3; ++jjj)
 			if (iii==jjj) Cbn[index_3(3, iii,jjj)] = 1;
 			else Cbn[index_3(3, iii,jjj)] = 0;
 #endif
-		/*Процедура нормирования и ортогонализации*/
+
 #if 0
-	//контроль масштаба
-	//Строки
-	for (int iii=0; iii<3; ++iii)
-		{
-			Ldoub string[3] = {Cbn[index_3(3,iii,0)], Cbn[index_3(3,iii,1)], Cbn[index_3(3,iii,2)]};
-			Ldoub norm[1];
-			MulMatrD(string, string, norm, 1,3,1);
-			norm[0] = 1 - norm[0];
-			for (int jjj=0; jjj < 3; ++jjj)
-				Cbn[index_3(3,iii,jjj)] = Cbn[index_3(3,iii,jjj)]  - 0.5*norm[0]*Cbn[index_3(3,iii,jjj)];
-		}
-	//Столбцы
-	for (int iii=0; iii<3; ++iii)
-		{
-			Ldoub string[3] = {Cbn[index_3(3,0,iii)], Cbn[index_3(3,1,iii)], Cbn[index_3(3,2,iii)]};
-			Ldoub norm[1];
-			MulMatrD(string, string, norm, 1,3,1);
-			norm[0] = 1 - norm[0];
-			for (int jjj=0; jjj < 3; ++jjj)
-				Cbn[index_3(3,jjj,iii)] = Cbn[index_3(3,jjj,iii)]  - 0.5*norm[0]*Cbn[index_3(3,jjj,iii)];
-		}
-#endif
-#if 0
-	// ортогонализация
-	//по строкам
-	for(int iii=0; iii < 3; ++iii)
-		for(int jjj=0; jjj < 3; ++jjj)
-		{
-			if(iii==jjj) continue;
-			Ldoub string[3] = {Cbn[index_3(3,iii,0)], Cbn[index_3(3,iii,1)], Cbn[index_3(3,iii,2)]};
-			Ldoub column[3] = {Cbn[index_3(3,jjj,0)], Cbn[index_3(3,jjj,1)], Cbn[index_3(3,jjj,2)]};
-			Ldoub norm[1];
-			MulMatrD(string, column,norm, 1,3,1);
-			for(int kkk=0; kkk<2; ++kkk)
-			{
-				Cbn[index_3(3,iii,kkk)] = Cbn[index_3(3,iii,kkk)] - 0.5*norm[0]*Cbn[index_3(3,jjj,kkk )];
-				Cbn[index_3(3,jjj,kkk)] = Cbn[index_3(3,jjj,kkk)] - 0.5*norm[0]*Cbn[index_3(3,iii,kkk)];
-			}
-		}
-	//по столбцам
-	for(int iii=0; iii < 3; ++iii)
-		for(int jjj=0; jjj < 3; ++jjj)
-		{
-			if(iii==jjj) continue;
-			Ldoub string[3] = {Cbn[index_3(3,0,iii)], Cbn[index_3(3,1,iii)], Cbn[index_3(3,2,iii)]};
-			Ldoub column[3] = {Cbn[index_3(3,0,jjj)], Cbn[index_3(3,1,jjj)], Cbn[index_3(3,2,jjj)]};
-			Ldoub norm[1];
-			MulMatrD(string, column,norm, 1,3,1);
-			for(int kkk=0; kkk<2; ++kkk)
-			{
-				Cbn[index_3(3,kkk,iii)] = Cbn[index_3(3,kkk,iii)] - 0.5*norm[0]*Cbn[index_3(3,kkk,jjj )];
-				Cbn[index_3(3,kkk,jjj)] = Cbn[index_3(3,kkk,jjj)] - 0.5*norm[0]*Cbn[index_3(3,kkk,iii)];
-			}
-		}
+	Normalization(Cbn, sw);
+	Ortogonalization(Cbn, sw);
+	sw = !sw; //меняем направление нормализации/ортогонализации
 #endif
 		
 	// вычисление углов ориентации через МНК (как в выставке)

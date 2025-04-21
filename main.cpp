@@ -4,16 +4,15 @@
 #include "mathematics.h"
 #include <cmath>
 #include <fstream> //файловые потоки для чтения бинарного файла библиотека C++
-#include <QDataStream>
-#include <QFile>
+//#include <QDataStream>
+//#include <QFile>
 #include "alignment.h"
 #include "SolveOrient.h"
 #include "SolveNav.h"
 //#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
 #define _USE_MATH_DEFINES
-//#define dev //для разработки и отладки
 
-#include <QDebug>
+//#define dev
 
 
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
@@ -90,7 +89,7 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 	return true;
 }
 
-#if 1
+#if 0
 void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
 {
 
@@ -201,10 +200,10 @@ int main(int argc, char *argv[])
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
-	Ldoub H0 = (Ldoub) (0.)*deg2rad;
+	Ldoub H0 = (Ldoub) (50.)*deg2rad;
 	Ldoub P0 = (Ldoub) (0.)*deg2rad;
 	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 0;
+	Ldoub Vabs = 30;
 	Ldoub Vgps[2] = {0};
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
@@ -246,8 +245,9 @@ int main(int argc, char *argv[])
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
 	
+	bool derectNorm (true); //направление ортогонализации и нормализации
 	// Чтение из файла ускорений и угловых скоростей
-#if 1
+#if 0
 	QFile file(argv[1]);
 	file.open(QIODevice::ReadOnly);
 	QDataStream in(&file);
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
 	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
 	fscanf(file, "%*s;");
 #endif
-	//std::ifstream in(argv[1], std::ios::binary);
+	std::ifstream in(argv[1], std::ios::binary);
 
 	Ldoub resultV[2] = {0};
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
@@ -274,15 +274,16 @@ int main(int argc, char *argv[])
 	Ldoub q[7*7] = {0};
 
 	
-	while( ! in.atEnd()/*ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps)*/) // Пока возможно чтение из файла
+	while( !in.eof() ) // Пока возможно чтение из файла
 	{
-		ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
-		//qDebug() << Ab[0] << Ab[1] << Ab[2] << Vgps[0] << Vgps[1];	
+		#ifdef dev
+		printf("Ab[0] = %.8f; Ab[1] = %.8f; Ab[2] = %.8f\n", Ab[0], Ab[1], Ab[2]);
+		#endif //dev
 		// этап выставки
 		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
-
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение данных используемых для выставки
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);			
 
 			++cur_time; // для 400 Гц
@@ -331,6 +332,7 @@ int main(int argc, char *argv[])
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение данных используемых для навигации
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
 			for (int iii=0; iii<3; ++iii)
 			{
@@ -401,10 +403,10 @@ int main(int argc, char *argv[])
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации
 		Ldoub omo[3] = {0}; //переносные угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
-		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, Rphi, Rlambda, freq, h, U, cur_time); //из одноименного заголовочного файла
+		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm); //из одноименного заголовочного файла
 		
 		/*Решение задачи навигации*/
-		SolveNav(Wp, Cbn,  Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0 );
+		SolveNav(Wp, Ab, Cbn,  Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0 );
 		// инкремент тактов
 		++cur_time;
 
