@@ -3,6 +3,7 @@
 #define STDH
 
 #define index_3(cols, row, col) (row*cols + col)
+//#define index(cols, row, col) (row*cols + col)
 #define Ldoub double
 
 #endif

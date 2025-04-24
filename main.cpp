@@ -9,10 +9,15 @@
 #include "alignment.h"
 #include "SolveOrient.h"
 #include "SolveNav.h"
-//#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
+#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
 #define _USE_MATH_DEFINES
+#include <stdlib.h>
 
 //#define dev
+
+#ifdef dev
+#include <stdio.h>
+#endif
 
 
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
@@ -66,7 +71,7 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 		for (int ii=0; ii<3; ++ii)
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
-			Omb[ii] += AllowBiasGyr*BiasAb[ii] + AllowRandGyr*RandOmb[ii];
+			Omb[ii] += AllowBiasGyr*BiasOmb[ii] + AllowRandGyr*RandOmb[ii];
 		}
 
 		//Считываем идеальные скорости от GPS
@@ -179,7 +184,7 @@ void GeneratedSens(Ldoub *Ab, Ldoub *Omb, Ldoub Vabs, Ldoub H0, int cur_time, in
 #endif
 int main(int argc, char *argv[])
 {
-	 //инициализация необходимых переменных и констант
+	//инициализация необходимых переменных и констант
 	const Ldoub g = 9.81;
 	const Ldoub a = 6378245;
 	const Ldoub b = 6356856;
@@ -200,10 +205,13 @@ int main(int argc, char *argv[])
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
-	Ldoub H0 = (Ldoub) (50.)*deg2rad;
-	Ldoub P0 = (Ldoub) (0.)*deg2rad;
-	Ldoub R0 = (Ldoub) (0.)*deg2rad;
-	Ldoub Vabs = 30;
+	Ldoub H0 = (Ldoub) (strtod(argv[1], NULL))*deg2rad;
+	Ldoub P0 = (Ldoub) (strtod(argv[2], NULL))*deg2rad;
+	Ldoub R0 = (Ldoub) (strtod(argv[3], NULL))*deg2rad;
+	Ldoub Vabs = (Ldoub) strtod(argv[4], NULL);
+
+	//printf("H0 = %.4f P0 = %.4f R0 = %.4f Vabs = %.4f\n", H0, P0, R0, Vabs);
+
 	Ldoub Vgps[2] = {0};
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
@@ -258,13 +266,13 @@ int main(int argc, char *argv[])
 	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
 	fscanf(file, "%*s;");
 #endif
-	std::ifstream in(argv[1], std::ios::binary);
+	std::ifstream in(argv[5], std::ios::binary);
 
 	Ldoub resultV[2] = {0};
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
 	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
 
-	//AdaptiveKalman filter(7, 3); //Создаю объект Адаптивного фильтра Калмана с матрицей размера 7*7 и измерениями 3*1 (вертикальную скорость тоже учитываю)
+	AdaptiveKalman filter(7, 3); //Создаю объект Адаптивного фильтра Калмана с матрицей размера 7*7 и измерениями 3*1 (вертикальную скорость тоже учитываю)
 	Ldoub x0[2] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[7*3] = {0}; //матрица наблюдения
 	H[index_3(3, 0, 0)] = 1;
@@ -276,9 +284,6 @@ int main(int argc, char *argv[])
 	
 	while( !in.eof() ) // Пока возможно чтение из файла
 	{
-		#ifdef dev
-		printf("Ab[0] = %.8f; Ab[1] = %.8f; Ab[2] = %.8f\n", Ab[0], Ab[1], Ab[2]);
-		#endif //dev
 		// этап выставки
 		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
@@ -333,6 +338,9 @@ int main(int argc, char *argv[])
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение данных используемых для навигации
+		#ifdef dev
+			printf("Ab[0] = %.10f; Ab[1] = %.10f; Ab[2] = %.10f\n", Ab[0], Ab[1], Ab[2]);
+		#endif //dev
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
 			for (int iii=0; iii<3; ++iii)
 			{
@@ -346,7 +354,7 @@ int main(int argc, char *argv[])
 			Ldoub EigAl[9] = {0, -Omb[2]*h1, Omb[1]*h1, Omb[2]*h1, 0, -Omb[0]*h1, -Omb[1]*h1, Omb[0]*h1, 0};
 			//вычисляем k1
 			Ldoub k1[3] = {0};
-			Ldoub al_w[3] = {0};
+			Ldoub al_w[3] = {0}; //вспомогательная матрица
 			
 			MulMatrD(EigAl, Wp, al_w, 3,3,1);
 			
@@ -391,12 +399,12 @@ int main(int argc, char *argv[])
 			for (int ii=0; ii<3; ++ii)
 			{
 				Wp[ii] = (Ldoub) Wp[ii] +  (Ldoub) 1./6*(k1[ii] + 2.*k2[ii] + 2.*k3[ii] + k4[ii]);
-#if 0
+#ifdef dev
 				printf("k1[%d] = %.10f\n", ii, k1[ii]);
 				printf("k2[%d] = %.10f\n", ii, k2[ii]);
 				printf("k3[%d] = %.10f\n", ii, k3[ii]);
 				printf("k4[%d] = %.10f\n", ii, k4[ii]);
-				printf("Wp[%d] = %.10f", ii, Wp[ii]);
+				printf("Wp[%d] = %.10f\n", ii, Wp[ii]);
 #endif
 			}
 		}		
@@ -490,8 +498,8 @@ int main(int argc, char *argv[])
 		static FILE* navig_res;
 		if(!navig_res)
 		{
-			if (argc == 3) //если аргументом передан файл для записи результатов, записываем в него
-					navig_res=fopen(argv[2],"wt");
+			if (argc == 7) //если аргументом передан файл для записи результатов, записываем в него
+					navig_res=fopen(argv[6],"wt");
 			else // если нет, записываем в файл по умолчанию
 				navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка

@@ -4,14 +4,15 @@
 
 #include "ap.h"
 #include "linalg.h"
+#include "std.h"
 
 class AdaptiveKalman
 {
 public:
 	AdaptiveKalman(int, int);
-	void Init(double*, double*, double* h);
+	void Init(Ldoub*, Ldoub*, Ldoub* h);
 	void Predict(); // функция предсказания по модели
-	void Update(double* );// функция обновления, т.е. вычисление оценки вектора по измерениям
+	void Update(Ldoub* );// функция обновления, т.е. вычисление оценки вектора по измерениям
 
 	alglib::real_1d_array Phi;
 	alglib::real_1d_array A;

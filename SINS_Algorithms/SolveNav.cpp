@@ -3,7 +3,7 @@
 #include "matrix.h"
 #include <cmath>
 
-#define dev
+//#define dev
 
 #ifdef dev
 #include <stdio.h>
@@ -19,8 +19,9 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Ao, Ldoub* V, Ldoub* Coor
 	printf("Определитель = %.8f\n", detC);
 	Ldoub AccO[3] = {0};// Ускорения в связанной с.к
 	MulMatrD(Cbn, Ab, AccO, 3, 3, 1); // перепроектирование Ускорений из связаных осей в навигационные.
-	printf("AccO[0] = %.8f AccO[1] = %.8f AccO[2] = %.8f\n", AccO[0], AccO[1], AccO[2]);
-	printf("Wo[0] = %.8f Wo[1] = %.8f Wo[2] = %.8f\n", Ao[0], Ao[1], Ao[2]);
+	printf("Ускорения в опорной с.к AccO[0] = %.8f AccO[1] = %.8f AccO[2] = %.8f\n", AccO[0], AccO[1], AccO[2]);
+	printf("Прииращения скоростей в связанной с.к Wp[0] = %.8f Wp[1] = %.8f Wp[2] = %.8f\n", Wp[0], Wp[1], Wp[2]);
+	printf("Прииращения скоростей в опорной с.к Wo[0] = %.8f Wo[1] = %.8f Wo[2] = %.8f\n", Ao[0], Ao[1], Ao[2]);
 	#endif //dev
 	
 	//Кориолисовы добавки

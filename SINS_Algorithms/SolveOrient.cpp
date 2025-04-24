@@ -148,7 +148,7 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 			else Cbn[index_3(3, iii,jjj)] = 0;
 #endif
 
-#if 0
+#if 1
 	Normalization(Cbn, sw);
 	Ortogonalization(Cbn, sw);
 	sw = !sw; //меняем направление нормализации/ортогонализации

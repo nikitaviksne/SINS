@@ -69,7 +69,7 @@ AdaptiveKalman::AdaptiveKalman(int dimx, int dimz)
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
 }
-void AdaptiveKalman::Init(double* initVal, double* q, double* h)
+void AdaptiveKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 {//Инициализация значениями
 
 
@@ -114,7 +114,7 @@ void AdaptiveKalman::Predict()
 
 }
 
-void AdaptiveKalman::Update(double* zin/*измерения обычные C-массивы*/)
+void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-массивы*/)
 {
 	for(int i=0; i< getDimZ(); i++)
 		this->z[i] = zin[i];
@@ -134,7 +134,7 @@ void AdaptiveKalman::Update(double* zin/*измерения обычные C-м�
 	for(int iii=0; iii<getDimZ(); iii++) 
 			for(int jjj=0; jjj<getDimZ(); ++jjj)
 			{
-				double buf;
+				Ldoub buf;
 				buf = iter / (iter + 1.) * (C[index_3(getDimZ(), iii, jjj)]) + 1. / (iter + 1.) *  (vvt[index_3(getDimZ(), iii, jjj)]); // для стационарной системы
 				C[index_3(getDimZ(), iii, jjj)] = buf;
 			}
@@ -154,7 +154,7 @@ void AdaptiveKalman::Update(double* zin/*измерения обычные C-м�
 	//Вычисляем  R
 	for(int iii=0; iii<getDimZ()*getDimZ(); ++iii)
 	{
-		double temp = C[iii] - H_Papr_H_t[iii];		
+		Ldoub temp = C[iii] - H_Papr_H_t[iii];		
 		R[iii] = temp;
 	}
 	

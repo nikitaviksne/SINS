@@ -13,6 +13,7 @@ round = 100
 '''Линейные скорости'''
 fig1, (fig1_ax1, fig1_ax2) = plt.subplots(1, 2)
 # Восточная составляющая
+fig1.suptitle("Скорости")
 fig1_ax1.set_title("Восточная скорость");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
@@ -29,6 +30,7 @@ fig1_ax2.grid(True)
 
 '''Углы ориентации'''
 fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(3, 1)
+fig2.suptitle("Углы")
 # Угол курса
 fig2_ax1.set_title("Угол курса");
 fig2_ax1.set_xlabel("мин")
@@ -54,6 +56,7 @@ fig2_ax3.grid(True)
 '''Ошибки по координатам'''
 fig3, (fig3_ax1, fig3_ax2) = plt.subplots(1, 2)
 # Восточное направление
+fig3.suptitle("Ошибка по координатам")
 fig3_ax1.set_title("Восточное направление");
 fig3_ax1.set_xlabel("мин")
 fig3_ax1.set_ylabel("м")
@@ -67,5 +70,14 @@ fig3_ax2.set_ylabel("м")
 fig3_ax2.legend(loc="best")
 fig3_ax2.plot(time, np.round(data["d_N"],round), label="dN");
 fig3_ax2.grid(True)
+
+'''Траектория'''
+fig3, (fig3_ax1) = plt.subplots(1, 1)
+# Восточное направление
+fig3.suptitle("Траектория")
+fig3_ax1.set_xlabel("град")
+fig3_ax1.set_ylabel("град")
+fig3_ax1.plot(np.round(np.rad2deg(data["Lambda"]), round), np.round(np.rad2deg(data["Phi"]), round) );
+fig3_ax1.grid(True)
 
 plt.show()
