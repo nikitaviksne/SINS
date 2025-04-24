@@ -94,6 +94,33 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 	return true;
 }
 
+int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
+{
+	Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
+	Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
+	Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
+	Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
+	Ldoub RandomVgps[2] = {0};
+
+	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", Ab[0], Ab[1], Ab[2], Omb[0], Omb[1], Omb[2], BiasAb[0], BiasAb[1], BiasAb[2], BiasOmb[0], BiasOmb[1], BiasOmb[2], RandAb[0], RandAb[1], RandAb[2], RandOmb[0], RandOmb[1], RandOmb[2], Vgps[0], Vgps[1]);
+	if (res == 22)
+	{
+		//добавление дрейфов к показаниям инерциальных датчиков
+		for (int ii=0; ii<3; ++ii)
+		{
+			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
+			Omb[ii] += AllowBiasGyr*BiasOmb[ii] + AllowRandGyr*RandOmb[ii];
+		}
+		//добавление шума к показаниям СНС
+		for(int iii=0; iii<2; ++iii)
+		{
+			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii];
+		}
+
+		return res;
+	}
+	else return -1; //означает что что-то не так
+}
 #if 0
 void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
 {
@@ -262,11 +289,11 @@ int main(int argc, char *argv[])
 	in.setByteOrder(QDataStream::LittleEndian);
 #endif
 
-#if 0
-	FILE* file=fopen("C:/Users/Viksne_NA/Documents/Python/data_files/data_acc.csv", "rt");
-	fscanf(file, "%*s;");
+#if 1
+	FILE* file=fopen(argv[5], "rt");
+	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
 #endif
-	std::ifstream in(argv[5], std::ios::binary);
+	//std::ifstream in(argv[5], std::ios::binary); !in.eof() //условие цикла while для бинарного файла
 
 	Ldoub resultV[2] = {0};
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
@@ -282,13 +309,13 @@ int main(int argc, char *argv[])
 	Ldoub q[7*7] = {0};
 
 	
-	while( !in.eof() ) // Пока возможно чтение из файла
+	while( Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла
 	{
 		// этап выставки
 		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
-			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение данных используемых для выставки
+			//ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);			
 
 			++cur_time; // для 400 Гц
@@ -337,7 +364,7 @@ int main(int argc, char *argv[])
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
-			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение данных используемых для навигации
+			//ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение из бинарного файла данных используемых для навигации
 		#ifdef dev
 			printf("Ab[0] = %.10f; Ab[1] = %.10f; Ab[2] = %.10f\n", Ab[0], Ab[1], Ab[2]);
 		#endif //dev
