@@ -37,6 +37,7 @@ public:
 	int getDimZ(); //функция для получения private размерности
 	void setDimX(int); //функция для установки private размерности
 	void setDimZ(int); //функция для установки private размерности
+	void Print2dMatr(alglib::real_1d_array A, int dim1, int dim2);//Функция дл вывода на печать матриц
 private:
 	int dim_x; //размер вектора состояния
 	int dim_z; //размер вектора измерений

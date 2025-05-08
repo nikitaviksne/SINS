@@ -3,6 +3,9 @@
 #include "AdaptiveKalman.h"
 #include "mathematics_kalman.h"
 #include "std.h"
+#include <stdio.h>
+
+// #define dev
 
 AdaptiveKalman::AdaptiveKalman(int dimx, int dimz)
 {
@@ -124,7 +127,10 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	matMul(getDimZ(), getDimX(), 1, H, x_1, Hx_1);
 	for (int iii=0; iii<getDimZ(); ++iii)
 		v[iii] = this->z[iii] - Hx_1[iii];
-
+#ifdef dev
+	printf("v:\n");
+	Print2dMatr(v, getDimZ(), 1);
+#endif
 	//Вычисляем v*v.T
 	alglib::real_1d_array vvt;
 	vvt.setlength(getDimZ() * getDimZ());
@@ -138,7 +144,11 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 				buf = iter / (iter + 1.) * (C[index_3(getDimZ(), iii, jjj)]) + 1. / (iter + 1.) *  (vvt[index_3(getDimZ(), iii, jjj)]); // для стационарной системы
 				C[index_3(getDimZ(), iii, jjj)] = buf;
 			}
-
+#ifdef dev
+	printf("C:\n");
+	Print2dMatr(C, getDimZ(), getDimZ());
+#endif
+	
 	alglib::real_1d_array H_t;
 	H_t.setlength(getDimX() * getDimZ());
 	transpose(getDimZ(), getDimX(), H, H_t);
@@ -147,9 +157,19 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	Papr_H_t.setlength(getDimX() * getDimZ());//временная переменная H @ Papr
 	matMul(getDimX(), getDimX(), getDimZ(), Papr, H_t, Papr_H_t);
 
+#ifdef dev
+	printf("Papr_H_t:\n");
+	Print2dMatr(Papr_H_t, getDimX(), getDimZ());
+#endif
+
 	alglib::real_1d_array H_Papr_H_t;
 	H_Papr_H_t.setlength(getDimZ() * getDimZ());//временная переменная H @ Papr @ H.T
 	matMul(getDimZ(), getDimX(), getDimZ(), H, Papr_H_t, H_Papr_H_t);
+
+#ifdef dev
+	printf("H_Papr_H_t:\n");
+	Print2dMatr(H_Papr_H_t, getDimZ(), getDimZ());
+#endif
 
 	//Вычисляем  R
 	for(int iii=0; iii<getDimZ()*getDimZ(); ++iii)
@@ -165,12 +185,21 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 				R[index_3(getDimZ(), jjj, jjj)] = 0;
 			break; //и выходим из внешнего цикла
 		}
-	
 
+#ifdef dev
+	printf("R:\n");
+	Print2dMatr(R, getDimZ(), getDimZ());
+#endif
+	
 	alglib::real_1d_array H_Papr_H_tR;
 	H_Papr_H_tR.setlength(getDimZ() * getDimZ());
 	for (int iii=0; iii<getDimZ()*getDimZ(); ++iii)
 		H_Papr_H_tR[iii] = H_Papr_H_t[iii] + R[iii];
+
+#ifdef dev
+	printf("H_Papr_H_tR:\n");
+	Print2dMatr(H_Papr_H_tR, getDimZ(), getDimZ());
+#endif	
 
 	alglib::real_2d_array invHPR; //обратная матрица к H_Papr_H_tR; 2D потому что библиотечная функция
 	invHPR.setlength(getDimZ(), getDimZ());
@@ -194,12 +223,29 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	for(int iii=0; iii< getDimZ(); ++iii)
 		for(int jjj=0; jjj< getDimZ(); ++jjj)
 			inv_H_P_H_t[index_3(getDimZ(), iii, jjj)] = invHPR[iii][jjj];
+	
+#ifdef dev
+	printf("inv_H_P_H_t:\n");
+	Print2dMatr(inv_H_P_H_t, getDimZ(), getDimZ());
+#endif
+	
 	//Наконец-то вычислили коэффициент усиления
 	matMul(getDimX(), getDimZ(), getDimZ(), Papr_H_t, inv_H_P_H_t, K);
+
+#ifdef dev
+	printf("K:\n");
+	Print2dMatr(K, getDimX(), getDimZ());
+#endif
 
 	alglib::real_1d_array Kv;
 	Kv.setlength(getDimX() * 1);
 	matMul(getDimX(), getDimZ(), 1, K, v, Kv);
+
+#ifdef dev
+	printf("Kv:\n");
+	Print2dMatr(Kv, getDimX(), 1);
+#endif
+
 	//поправляем наше предсказание (экстраполяцию)
 	for (int iii=0; iii< getDimX(); ++iii)
 		x[iii] = x_1[iii] + Kv[iii];
@@ -234,4 +280,13 @@ void AdaptiveKalman::setDimX(int val) //функция для установки
 void AdaptiveKalman::setDimZ(int val) //функция для установки private размерности
 {
 	dim_z = val;
+}
+
+void AdaptiveKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Функция дл вывода на печать матриц
+{
+	for (int iii=0; iii<dim1; ++iii)
+	{
+		for (int jjj=0; jjj<dim2; ++jjj) printf("%10.10f ", A[index_3(dim2, iii, jjj)]);
+		printf("\n");
+	}
 }

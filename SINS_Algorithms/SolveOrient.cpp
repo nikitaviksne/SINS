@@ -62,7 +62,9 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
     omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
 	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
 	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
-	Coordinates[2] += (Ldoub) (V[2])/freq;
+	//Coordinates[2] += (Ldoub) (V[2])/freq;
+
+	
 	//Ldoub EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
 	Ldoub EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
 	//Ldoub EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
@@ -148,7 +150,7 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 			else Cbn[index_3(3, iii,jjj)] = 0;
 #endif
 
-#if 1
+#if 0 // коррекция матрицы перехода
 	Normalization(Cbn, sw);
 	Ortogonalization(Cbn, sw);
 	sw = !sw; //меняем направление нормализации/ортогонализации

@@ -72,6 +72,7 @@ set(Headers_Kalman
 	)
 set(Source_Kalman 
 		Kalman/AdaptiveKalman.cpp
+		Kalman/UsualKalman.cpp
 		Kalman/mathematics_kalman.cpp	
 	)
 #message(STATUS Source_Kalman, ${Source_Kalman})
