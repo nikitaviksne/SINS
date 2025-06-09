@@ -274,10 +274,10 @@ int main(int argc, char *argv[])
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
 	bool AllowBiasAcc = false;
-	bool AllowBiasGyr = true;
+	bool AllowBiasGyr = false;
 	bool AllowRandAcc = false;
 	bool AllowRandGyr = false;
-	bool AllowRandVgps = true;
+	bool AllowRandVgps = false;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 	int dim_sense (2); //размер вектора измерения
 	//*/
 	AdaptiveKalman filter(6, 2); //Создаю объект обычного фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
-	Ldoub x0[6] = {0}; //Начальные оценочные значения дрейфов
+	Ldoub x0[6] = {V[0], V[1], 0}; //Начальные оценочные значения двектора состояния
 	Ldoub H[2*6] = {0}; //матрица наблюдения
 	H[index_3(6, 0, 0)] = 1;
 	H[index_3(6, 1, 1)] = 1;

@@ -13,9 +13,9 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
     Ldoub Thet4[3] = {0}; //Вектор Эйлера
 	for (int mmm=0; mmm<3; ++mmm)
 		for (int kkk=0; kkk<4; ++kkk)
-	{
-		Thet4[mmm] += alpha[index_3(4, mmm, kkk)];
-	}
+		{
+			Thet4[mmm] += alpha[index_3(4, mmm, kkk)];
+		}
 	//Для вектора Эйлера необходимо векторное умножение
 	Ldoub al_1_2[3] = {0};
 	Ldoub al_3_4[3] = {0};
@@ -150,7 +150,7 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 			else Cbn[index_3(3, iii,jjj)] = 0;
 #endif
 
-#if 0 // коррекция матрицы перехода
+#if 1 // коррекция матрицы перехода
 	Normalization(Cbn, sw);
 	Ortogonalization(Cbn, sw);
 	sw = !sw; //меняем направление нормализации/ортогонализации
