@@ -262,11 +262,11 @@ int main(int argc, char *argv[])
 	Ldoub Cbn[9] = {0};
 	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной системы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
-	Ldoub V0[2] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0)}; // линейные скорости E; N
+	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
-	Ldoub ErrVins[2] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок)
+	Ldoub ErrVins[3] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок)
 	// массивы для выходных значений
-	Ldoub V[2] = {(Ldoub) V0[0], (Ldoub) V0[1]}; // линейные скорости E; N
+	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
@@ -274,10 +274,10 @@ int main(int argc, char *argv[])
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = true;
+	bool AllowBiasAcc = false;
 	bool AllowBiasGyr = true;
-	bool AllowRandAcc = true;
-	bool AllowRandGyr = true;
+	bool AllowRandAcc = false;
+	bool AllowRandGyr = false;
 	bool AllowRandVgps = true;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
@@ -396,15 +396,17 @@ int main(int argc, char *argv[])
 		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
 		
 		//Включение и выключение коррекции
+	#if 0
 		if (cur_time == int(20*60/h) )
 			allowCorr = true;
 		if (cur_time == int(50*60/h) )
 			allowCorr = false;
-
+	#endif
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение из бинарного файла данных используемых для навигации
+		#if 1
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
 			for (int iii=0; iii<3; ++iii)
 			{
@@ -464,6 +466,7 @@ int main(int argc, char *argv[])
 			{
 				Wp[ii] = (Ldoub) Wp[ii] +  (Ldoub) 1./6*(k1[ii] + 2.*k2[ii] + 2.*k3[ii] + k4[ii]);
 			}
+		#endif
 		}		
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации

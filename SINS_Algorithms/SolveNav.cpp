@@ -28,6 +28,7 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	
 	//Кориолисовы добавки
 	Ldoub aCoriolis[3] = {0};
+	
 	aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
 	aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
 	aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
@@ -36,7 +37,7 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	printf("aCoriolis[0] = %.8f aCoriolis[1] = %.8f aCoriolis[2] = %.8f\n", aCoriolis[0], aCoriolis[1], aCoriolis[2]);
 	#endif //dev
 	
-	for (int iii=0; iii < 2; ++iii)	V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
+	for (int iii=0; iii < 2; ++iii)	V[iii] = V[iii] + Wo[iii] - (0*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
 		
 	//Ошибки по скоростям в м/с и координатам в м
 	for (int iii=0; iii<2; ++iii)
