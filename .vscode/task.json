@@ -1,7 +1,0 @@
-{
-    "version":"0.1.0",
-    "command": "g++",
-    "isShelCommand":true,
-    "args":["-I", "${workspaceRoot}/include", "-I", "${workspaceRoot}/", "main.cpp", "matrix.cpp", "-g", "-o", "a.out"],
-    "showOutput": "always"
-}

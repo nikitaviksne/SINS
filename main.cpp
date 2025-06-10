@@ -264,6 +264,7 @@ int main(int argc, char *argv[])
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
 	Ldoub V0[2] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0)}; // линейные скорости E; N
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
+	Ldoub ErrVins[2] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок)
 	// массивы для выходных значений
 	Ldoub V[2] = {(Ldoub) V0[0], (Ldoub) V0[1]}; // линейные скорости E; N
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
@@ -273,17 +274,23 @@ int main(int argc, char *argv[])
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = false;
+	bool AllowBiasAcc = true;
 	bool AllowBiasGyr = true;
-	bool AllowRandAcc = false;
-	bool AllowRandGyr = false;
+	bool AllowRandAcc = true;
+	bool AllowRandGyr = true;
 	bool AllowRandVgps = true;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
 	
 	bool derectNorm (true); //направление ортогонализации и нормализации
+	
+	Ldoub kcor1 (0.0024637140154102196); // метод наименьшей дисперсии (Быковский) программой на python
+	Ldoub kcor2 (1.0203912707911544); // метод наименьшей дисперсии (Быковский) программой на python
+	bool allowCorr (false); //разрешение на коррекцию
 	// Чтение из файла ускорений и угловых скоростей
+
+
 #if 0
 	QFile file(argv[1]);
 	file.open(QIODevice::ReadOnly);
@@ -304,15 +311,15 @@ int main(int argc, char *argv[])
 	int dim_state (6); //размер вектора состояния
 	int dim_sense (2); //размер вектора измерения
 	//*/
-	AdaptiveKalman filter(6, 2); //Создаю объект обычного фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
+	AdaptiveKalman filter(6, 2); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
 	Ldoub x0[6] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[2*6] = {0}; //матрица наблюдения
 	H[index_3(6, 0, 0)] = 1;
 	H[index_3(6, 1, 1)] = 1;
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[6*6] = {0};
-	q[28] = 1e-16;
-	q[35] = 1e-16;
+	q[index_3(6, 4, 4)] = 1e-16;
+	q[index_3(6, 5, 5)] = 1e-16;
 
 	Ldoub r[2*2] = {0.05*0.05, 0, 0, 0.05*0.05};
 
@@ -387,6 +394,12 @@ int main(int argc, char *argv[])
 		Ldoub MeanW[3] = {0}; //осредненные малые приращения скоростей
 
 		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
+		
+		//Включение и выключение коррекции
+		if (cur_time == int(20*60/h) )
+			allowCorr = true;
+		if (cur_time == int(50*60/h) )
+			allowCorr = false;
 
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
@@ -455,10 +468,10 @@ int main(int argc, char *argv[])
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации
 		Ldoub omo[3] = {0}; //переносные угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
-		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm); //из одноименного заголовочного файла
+		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 		
 		/*Решение задачи навигации*/
-		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0 );
+		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
 		++cur_time;
 
@@ -468,7 +481,7 @@ int main(int argc, char *argv[])
 	#if 1
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
 		// Delta dot V_ox
-		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]) ; //Vox
+		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]) - filter.K[0]; //Vox
 		filter.A[index_3(dim_state, 0, 1)] = V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + 2*U*sin(Coordinates[0]); //Voy
 		filter.A[index_3(dim_state, 0, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 0, 3)] =  -Ao[2]; //Phi_oy
@@ -476,20 +489,20 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 0, 5)] = 0; //d_omega_y
 		//Delta dot V_oy
 		filter.A[index_3(dim_state, 1, 0)] = -2*(V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0])); //Vox
-		filter.A[index_3(dim_state, 1, 1)] = 0; //Voy
+		filter.A[index_3(dim_state, 1, 1)] = 0 - filter.K[1]; //Voy
 		filter.A[index_3(dim_state, 1, 2)] = Ao[2]; //Phi_ox
 		filter.A[index_3(dim_state, 1, 3)] = 0; //Phi_oy
 		filter.A[index_3(dim_state, 1, 4)] = 0;//d_omega_x
 		filter.A[index_3(dim_state, 1, 5)] = 0;//d_omega_y
 		//Phi_ox
 		filter.A[index_3(dim_state, 2, 0)] = 0; //Vox
-		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]); //Voy
+		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]) - filter.K[1]; //Voy
 		filter.A[index_3(dim_state, 2, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 3)] = omo[2]; //Phi_oy
 		filter.A[index_3(dim_state, 2, 4)] = -cos(Orientation[0]);//d_omega_x
 		filter.A[index_3(dim_state, 2, 5)] = -sin(Orientation[0]);//d_omega_y
 		//Phi_oy
-		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]); //Vox
+		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]) + filter.K[1]; //Vox
 		filter.A[index_3(dim_state, 3, 1)] = 0; //Voy
 		filter.A[index_3(dim_state, 3, 2)] = - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 3)] = 0; //Phi_oy
@@ -512,17 +525,23 @@ int main(int argc, char *argv[])
 
 		if (!filter.init) //Если ранее не было инициализации, то инициализируем
 		{
-			filter.Init(x0, q, H);
+			filter.Init(x0, q, /*r,*/ H);
 		}
 		else//в противном случае оцениваем
 		{
 			for (int iii =0; iii < filter.getDimX()*filter.getDimX(); ++iii) //вычисляю матрицу перехода Phi
 				filter.Phi[iii] = filter.I[iii] + filter.A[iii] * h; //не забываем умножить на такт интегрирования
 			
-			Ldoub ErrVins[2] = {V[0] - Vgps[0], V[1] - Vgps[1]}; //разница ошибок ИНС и СНС
+			for (int iii=0; iii<filter.getDimZ(); ++iii)
+				ErrVins[iii] = V[iii] - Vgps[iii]; //разница ошибок ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
+			
+		#if 0
+			for (int iii=0; iii<2; ++iii)
+				V[iii] -= filter.x[iii]; // коррекция скоростей ИНС
+		#endif
 		}
 	#endif
 		// Запись в файл навигационного решения (скорости, координаты, углы, ошибки по скоростям, ошибки по координатам)
@@ -574,7 +593,7 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 
-#if 1
+#if 0
 		//Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)

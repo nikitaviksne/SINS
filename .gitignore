@@ -1,4 +1,5 @@
 data/*
+Data_files
 # object files (.o) and output (executible) files (.out)
 *.o*
 # settings vscod

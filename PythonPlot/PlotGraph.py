@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import sys #для приема имени файла для построения через аргумент команды
 
 relative_path = sys.argv[1]
-data =pd.read_csv("~/InertialNavigation/data/"+relative_path, delimiter=";");
+# data =pd.read_csv("~/InertialNavigation/data/"+relative_path, delimiter=";");
+data =pd.read_csv(relative_path, delimiter=";");
+
 
 time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
 
