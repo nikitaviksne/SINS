@@ -274,10 +274,10 @@ int main(int argc, char *argv[])
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = false;
+	bool AllowBiasAcc = true;
 	bool AllowBiasGyr = true;
-	bool AllowRandAcc = false;
-	bool AllowRandGyr = false;
+	bool AllowRandAcc = true;
+	bool AllowRandGyr = true;
 	bool AllowRandVgps = true;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
@@ -285,8 +285,8 @@ int main(int argc, char *argv[])
 	
 	bool derectNorm (true); //направление ортогонализации и нормализации
 	
-	Ldoub kcor1 (0.0024637140154102196); // метод наименьшей дисперсии (Быковский) программой на python
-	Ldoub kcor2 (1.0203912707911544); // метод наименьшей дисперсии (Быковский) программой на python
+	Ldoub kcor1 (0.006138995628986877); // метод наименьшей дисперсии (Быковский) программой на python
+	Ldoub kcor2 (11.54438988378206); // метод наименьшей дисперсии (Быковский) программой на python
 	bool allowCorr (false); //разрешение на коррекцию
 	// Чтение из файла ускорений и угловых скоростей
 
@@ -318,10 +318,10 @@ int main(int argc, char *argv[])
 	H[index_3(6, 1, 1)] = 1;
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[6*6] = {0};
-	q[index_3(6, 4, 4)] = 1e-16;
-	q[index_3(6, 5, 5)] = 1e-16;
+	q[index_3(6, 4, 4)] = 1e-17;
+	q[index_3(6, 5, 5)] = 1e-17;
 
-	Ldoub r[2*2] = {0.05*0.05, 0, 0, 0.05*0.05};
+	Ldoub r[2*2] = {0.05, 0, 0, 0.05};
 
 #if 0
 	//Для лучшей обусловленности матрицы HPH_t увеличиваю начальные значения априорной ошибки
@@ -397,9 +397,9 @@ int main(int argc, char *argv[])
 		
 		//Включение и выключение коррекции
 	#if 0
-		if (cur_time == int(20*60/h) )
+		if (cur_time == int(60*60/h) )
 			allowCorr = true;
-		if (cur_time == int(50*60/h) )
+		if (cur_time == int(70*60/h) )
 			allowCorr = false;
 	#endif
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
 	#if 1
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
 		// Delta dot V_ox
-		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]) - filter.K[0]; //Vox
+		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Vox
 		filter.A[index_3(dim_state, 0, 1)] = V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + 2*U*sin(Coordinates[0]); //Voy
 		filter.A[index_3(dim_state, 0, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 0, 3)] =  -Ao[2]; //Phi_oy
@@ -492,20 +492,20 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 0, 5)] = 0; //d_omega_y
 		//Delta dot V_oy
 		filter.A[index_3(dim_state, 1, 0)] = -2*(V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0])); //Vox
-		filter.A[index_3(dim_state, 1, 1)] = 0 - filter.K[1]; //Voy
+		filter.A[index_3(dim_state, 1, 1)] = 0; //Voy
 		filter.A[index_3(dim_state, 1, 2)] = Ao[2]; //Phi_ox
 		filter.A[index_3(dim_state, 1, 3)] = 0; //Phi_oy
 		filter.A[index_3(dim_state, 1, 4)] = 0;//d_omega_x
 		filter.A[index_3(dim_state, 1, 5)] = 0;//d_omega_y
 		//Phi_ox
 		filter.A[index_3(dim_state, 2, 0)] = 0; //Vox
-		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]) - filter.K[1]; //Voy
+		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]); //Voy
 		filter.A[index_3(dim_state, 2, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 3)] = omo[2]; //Phi_oy
 		filter.A[index_3(dim_state, 2, 4)] = -cos(Orientation[0]);//d_omega_x
 		filter.A[index_3(dim_state, 2, 5)] = -sin(Orientation[0]);//d_omega_y
 		//Phi_oy
-		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]) + filter.K[1]; //Vox
+		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]); //Vox
 		filter.A[index_3(dim_state, 3, 1)] = 0; //Voy
 		filter.A[index_3(dim_state, 3, 2)] = - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 3)] = 0; //Phi_oy
@@ -596,12 +596,12 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 
-#if 0
+#if 1
 		//Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
 		{
-			for_Kalman=fopen("./data/For_Kalman.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
+			for_Kalman=fopen("./data/For_Kalman.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,longitude,Ve_gps,Vn_gps
 			// Шапка
 			fprintf(for_Kalman, "Timestamp,");
 			fprintf(for_Kalman, "a_ll_x,");
@@ -616,7 +616,7 @@ int main(int argc, char *argv[])
 			fprintf(for_Kalman, "roll,");
 			fprintf(for_Kalman, "pitch,");
 			fprintf(for_Kalman, "latitude,");
-			fprintf(for_Kalman, "lingitude,");
+			fprintf(for_Kalman, "longitude,");
 			fprintf(for_Kalman, "Ve_gps,");
 			fprintf(for_Kalman, "Vn_gps");
 			fprintf(for_Kalman, "\n");
@@ -642,8 +642,8 @@ int main(int argc, char *argv[])
 			for(int i=0; i<2; ++i)
 				fprintf(for_Kalman, "%.10e,", Coordinates[i]);
 			//Скорости от GPS
-			fprintf(for_Kalman, "%.10e,", Vgps[0]);// с запяттой
-			fprintf(for_Kalman, "%.10e", Vgps[1]); // без запятой
+			for (int iii=0; iii<2; ++iii)
+				fprintf(for_Kalman, "%.10e,", Vgps[iii]);
 			
 			fprintf(for_Kalman, "\n");
 		}
@@ -663,6 +663,8 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "Phi_n,");
 			fprintf(estimations, "d_omega_x,");
 			fprintf(estimations, "d_omega_y,");
+			fprintf(estimations, "d_Roll,");
+			fprintf(estimations, "d_Pitch,");
 			fprintf(estimations, "\n");
 		}
 		
@@ -673,6 +675,10 @@ int main(int argc, char *argv[])
 			// весь вектор состояния
 			for(int i=0; i<dim_state; ++i)
 				fprintf(estimations, "%.10e,", filter.x[i]);
+			double d_roll = -(filter.x[3] * cos(/*Orientation[0]*/H0) + filter.x[2] * sin(/*Orientation[0]*/H0)) * (1./cos(/*Orientation[2]*/P0));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			double d_pitch = -(filter.x[2] * cos(/*Orientation[0]*/H0) - filter.x[3] * sin(/*Orientation[0]*/H0));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			fprintf(estimations, "%.10e,", d_roll);
+			fprintf(estimations, "%.10e,", d_pitch);
 			fprintf(estimations, "\n");
 		}
 		fflush(estimations);

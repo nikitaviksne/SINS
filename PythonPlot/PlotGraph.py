@@ -36,23 +36,23 @@ fig2.suptitle("Углы")
 # Угол курса
 fig2_ax1.set_title("Угол курса");
 fig2_ax1.set_xlabel("мин")
-fig2_ax1.set_ylabel("град")
+fig2_ax1.set_ylabel("угл. мин")
 fig2_ax1.legend(loc="best")
-fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"]),round), label="Курс");
+fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"])*60,round), label="Курс");
 fig2_ax1.grid(True)
 # Угол крена
 fig2_ax2.set_title("Угол крена");
 fig2_ax2.set_xlabel("мин")
-fig2_ax2.set_ylabel("град")
+fig2_ax2.set_ylabel("угл. мин")
 fig2_ax2.legend(loc="best")
-fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"]),round), label="Крен");
+fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="Крен");
 fig2_ax2.grid(True)
 # Угол тангажа
 fig2_ax3.set_title("Угол тангажа");
 fig2_ax3.set_xlabel("мин")
-fig2_ax3.set_ylabel("град")
+fig2_ax3.set_ylabel("угл. мин")
 fig2_ax3.legend(loc="best")
-fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"]),round), label="Тангаж");
+fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="Тангаж");
 fig2_ax3.grid(True)
 
 '''Ошибки по координатам'''

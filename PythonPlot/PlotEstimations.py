@@ -29,9 +29,10 @@ fig1_ax2.plot(time, np.round(data["Vn"],round), label="Vn");
 fig1_ax2.grid(True)
 
 
-'''Оценки углов ориентации'''
-fig2, (fig2_ax1) = plt.subplots(1, 1)
-fig2.suptitle("Оценки ориентации Фx, Фy")
+'''Оценки ориентации'''
+fig2, (fig2_ax1, fig2_ax2) = plt.subplots(1, 2)
+fig2.suptitle("Оценки углов");
+fig2_ax1.set_title("Оценки ориентации Фx, Фy")
 # Угол Фx
 fig2_ax1.set_xlabel("мин")
 fig2_ax1.set_ylabel("угл. мин.")
@@ -40,34 +41,53 @@ fig2_ax1.plot(time, 60*np.round(np.rad2deg(data["Phi_e"]),round), label="Фx");
 fig2_ax1.plot(time, 60*np.round(np.rad2deg(data["Phi_n"]),round), label="Фy");
 fig2_ax1.legend(loc="best")
 fig2_ax1.grid(True)
+#
+fig2_ax2.set_title("Оценки углов ориентации крен, тангаж")
+# Угол Фx
+fig2_ax2.set_xlabel("мин")
+fig2_ax2.set_ylabel("угл. мин.")
+fig2_ax2.plot(time, 60*np.round(np.rad2deg(data["d_Roll"]),round), label="$\Delta\gamma$");
+# Угол Фy
+fig2_ax2.plot(time, 60*np.round(np.rad2deg(data["d_Pitch"]),round), label="$\Delta\\theta$");
+fig2_ax2.legend(loc="best")
+fig2_ax2.grid(True)
 
 '''Осредняем скорости дрейфов гироскопов и сглаживаем ФНЧ с T=100'''
 
-Tf = 1e7;
-mean = [[0],[0]]
+Tf = 1e6;
+mean = [[0],[0]] # среднее значение ФНЧ
 flf = [[0], [0]] # filter lower frequency
 for i, dx in enumerate(data["d_omega_x"]):
     #MeanAb[i] = (Ldoub) MeanAb[i] + (Ab[i] - MeanAb[i]) / (iter + 1); //(iter * MeanAb[i] + Ab[i])/(iter + 1);
-    mean[0].append(mean[0][i] + (dx - mean[0][i])/(i + 1));
-    mean[1].append(mean[1][i] + (data["d_omega_y"][i+1] - mean[1][i])/(i + 1));
     flf[0].append((dx + Tf/100*flf[0][-1])/(1 + Tf/100))
     flf[1].append((data["d_omega_y"][i+1] + Tf/100*flf[1][-1])/(1 + Tf/100))
-
+    mean[0].append(mean[0][i] + (flf[0][i+1] - mean[0][i])/(i + 1));
+    mean[1].append(mean[1][i] + (flf[1][i+1] - mean[1][i])/(i + 1));
+del(mean[0][0])
+del(mean[1][0])
+del(flf[0][0])
+del(flf[1][0])
 
 '''Оценки дрейфов гироскопов'''
-fig3, (fig3_ax1) = plt.subplots(1, 1)
+fig4, (fig4_ax1, fig4_ax2) = plt.subplots(2, 1)
 # Восточное направление
-fig3.suptitle("Оценки скоростей дрейфов гироскопов")
-fig3_ax1.set_xlabel("мин")
-fig3_ax1.set_ylabel("град/час")
-fig3_ax1.plot(time, np.round(np.rad2deg(data["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
-fig3_ax1.plot(time, np.round(np.rad2deg(data["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
-fig3_ax1.plot(time, np.round(np.rad2deg(mean[0][:-1]), round)*3600, label="$E(\omega_x)$");
-fig3_ax1.plot(time, np.round(np.rad2deg(mean[1][:-1]), round)*3600, label="$E(\omega_y)$");
-#ФНЧ
-fig3_ax1.plot(time, np.round(np.rad2deg(flf[0][:-1]), round)*3600, label="$\omega_x^F$");
-fig3_ax1.plot(time, np.round(np.rad2deg(flf[1][:-1]), round)*3600, label="$\omega_y^F$");
-fig3_ax1.grid(True)
-fig3_ax1.legend(loc="best")
+fig4.suptitle("Оценка скоростей дрейфов гироскопов")
+fig4_ax1.set_title("Оценка скоростей дрейфа гироскопа X")
+fig4_ax1.set_xlabel("мин")
+fig4_ax1.set_ylabel("град/час")
+fig4_ax1.plot(time, np.round(np.rad2deg(data["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
+fig4_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
+fig4_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$");
+fig4_ax1.grid(True)
+fig4_ax1.legend(loc="best")
+# 
+fig4_ax2.set_title("Оценка скоростей дрейфа гироскопа Y")
+fig4_ax2.set_xlabel("мин")
+fig4_ax2.set_ylabel("град/час")
+fig4_ax2.plot(time, np.round(np.rad2deg(data["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
+fig4_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
+fig4_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$");
+fig4_ax2.grid(True)
+fig4_ax2.legend(loc="best")
 
 plt.show()
