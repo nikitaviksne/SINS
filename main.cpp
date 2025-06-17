@@ -46,12 +46,12 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 		//Считываю показания ДУС
 		for (int jjj=0; jjj<3; ++jjj)
 			is.read((char *) &Omb[jjj], sizeof(double));
-		
+
 		Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
 		Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
 		Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
 		Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
-		
+
 		//Считываю показания постоянных смещений нуля акселерометров
 		for (int jjj=0; jjj<3; ++jjj)
 			is.read((char *) &BiasAb[jjj], sizeof(double));
@@ -78,7 +78,7 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 		//Считываем идеальные скорости от GPS
 		for (int iii =0; iii<2; ++iii)
 			is.read((char *) &Vgps[iii], sizeof(double));
-		
+
 		// Считываем шум скорости от GPS (с нулевым средним)
 		Ldoub RandomVgps[2] = {0};
 		for (int iii =0; iii<2; ++iii)
@@ -122,7 +122,19 @@ int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, 
 	}
 	else return -1; //означает что что-то не так
 }
-#if 0
+
+int Readfile(FILE* is, Ldoub* Ab, Ldoub* Omb) // Чтение сырых данных (от микромеханики)
+{
+	int timestamp;
+	int res = fscanf(is, "%d;%lf;%lf;%lf;%lf;%lf;%lf\n", &timestamp, &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2]);
+	if (res == 7)
+	{
+		return res;
+	}
+	else return -1; //означает что что-то не так
+}
+
+#if 0 //QT
 void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
 {
 
@@ -165,7 +177,7 @@ void ReadFile(QDataStream &in, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowR
 	//Считываем идеальные скорости от GPS
 	for (int iii =0; iii<2; ++iii)
 		in >> Vgps[iii];
-	
+
 	// Считываем шум скорости от GPS (с нулевым средним)
 	Ldoub RandomVgps[2] = {0};
 	for (int iii =0; iii<2; ++iii)
@@ -222,10 +234,10 @@ int main(int argc, char *argv[])
 	const Ldoub U = 7.27220521664304e-05;
 	const Ldoub rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
 	const Ldoub deg2rad = 1./rad2deg;
-	int freq = 100; // частота измерений с инерциальных датчиков
-	Ldoub h = 0.01; //период дискретизации
-	int freq1 = 400; // частота свехбыстрого цикла
-	Ldoub h1 (1./400); // период дискретизации свехбыстрого цикла
+	int freq1 = 100; // частота свехбыстрого цикла
+	Ldoub h1 (1./freq1); // период дискретизации свехбыстрого цикла
+	int freq = freq1/4;//100; // частота измерений с инерциальных датчиков
+	Ldoub h (1./freq); //период дискретизации
 	int t_nav = 180*60; // время работы нав алгоритма в секундах
 	int t_alignment = (int) 5*60*freq1; // время выставки в тактах
 	Ldoub Rlambda;
@@ -274,17 +286,17 @@ int main(int argc, char *argv[])
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = true;
-	bool AllowBiasGyr = true;
-	bool AllowRandAcc = true;
-	bool AllowRandGyr = true;
-	bool AllowRandVgps = true;
+	bool AllowBiasAcc = (bool) (strtod(argv[6], NULL));
+	bool AllowBiasGyr = (bool) (strtod(argv[7], NULL));
+	bool AllowRandAcc = (bool) (strtod(argv[8], NULL));
+	bool AllowRandGyr = (bool) (strtod(argv[9], NULL));
+	bool AllowRandVgps = (bool) (strtod(argv[10], NULL));
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
-	
+
 	bool derectNorm (true); //направление ортогонализации и нормализации
-	
+
 	Ldoub kcor1 (0.006138995628986877); // метод наименьшей дисперсии (Быковский) программой на python
 	Ldoub kcor2 (11.54438988378206); // метод наименьшей дисперсии (Быковский) программой на python
 	bool allowCorr (false); //разрешение на коррекцию
@@ -298,14 +310,16 @@ int main(int argc, char *argv[])
 	in.setByteOrder(QDataStream::LittleEndian);
 #endif
 
-#if 0
+#if 1
 	FILE* file=fopen(argv[5], "rt");
-	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
-#endif
+	//fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
+	int res = Readfile(file, Ab, Omb);
+#else
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
-
+	#define FILE_STREAM
+#endif
 	Ldoub resultV[2] = {0};
-	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
+	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений
 	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
 	///*
 	int dim_state (6); //размер вектора состояния
@@ -330,16 +344,20 @@ int main(int argc, char *argv[])
 		filter.Papr[index_3(filter.getDimX(), iii, iii)] = 1;
 	}
 #endif
-	
-	while( !in.eof()) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
+
+	while(res == 7 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
 	{ // цилк while для частоты 100 Гц, поэтому нельзя сделать общее чтение файла для выставки и навигации
 
 		// этап выставки
 		if ((cur_time <= t_alignment) && AlignmentContinue )
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
+			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
-			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);			
+			#else
+			res = Readfile(file, Ab, Omb);
+			#endif
+			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
 			++cur_time; // для 400 Гц
 			/*
 			printf("Mean Omb\n");
@@ -394,7 +412,7 @@ int main(int argc, char *argv[])
 		Ldoub MeanW[3] = {0}; //осредненные малые приращения скоростей
 
 		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
-		
+
 		//Включение и выключение коррекции
 	#if 0
 		if (cur_time == int(60*60/h) )
@@ -405,7 +423,11 @@ int main(int argc, char *argv[])
 		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
-			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);//чтение из бинарного файла данных используемых для навигации
+			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
+			#else //в противном случае, читаем, что есть
+			res = Readfile(file, Ab, Omb);
+			#endif
 		#if 1
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
 			for (int iii=0; iii<3; ++iii)
@@ -421,9 +443,9 @@ int main(int argc, char *argv[])
 			//вычисляем k1
 			Ldoub k1[3] = {0};
 			Ldoub al_w[3] = {0}; //вспомогательная матрица
-			
+
 			MulMatrD(EigAl, Wp, al_w, 3,3,1);
-			
+
 			for (int nnn=0; nnn<3; ++nnn)
 			{
 				k1[nnn] = w[index_3(4, nnn, in_iter)] - al_w[nnn];
@@ -431,10 +453,10 @@ int main(int argc, char *argv[])
 			//вычисляем k2
 			Ldoub k2[3]={0.};
 			Ldoub temp_w_k[3] = {0.};
-				
+
 			for (int i=0; i<3; i++)
 				temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k1[i];
-				
+
 			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
 			for (int nnn=0; nnn<3; ++nnn)
 			{
@@ -442,7 +464,7 @@ int main(int argc, char *argv[])
 			}
 			//вычисляем k3
 			Ldoub k3[3]={0.};
-			
+
 			for (int i=0; i<3; i++) temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k2[i];
 
 			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
@@ -467,12 +489,12 @@ int main(int argc, char *argv[])
 				Wp[ii] = (Ldoub) Wp[ii] +  (Ldoub) 1./6*(k1[ii] + 2.*k2[ii] + 2.*k3[ii] + k4[ii]);
 			}
 		#endif
-		}		
+		}
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации
 		Ldoub omo[3] = {0}; //переносные угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
 		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
-		
+
 		/*Решение задачи навигации*/
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
@@ -534,13 +556,13 @@ int main(int argc, char *argv[])
 		{
 			for (int iii =0; iii < filter.getDimX()*filter.getDimX(); ++iii) //вычисляю матрицу перехода Phi
 				filter.Phi[iii] = filter.I[iii] + filter.A[iii] * h; //не забываем умножить на такт интегрирования
-			
+
 			for (int iii=0; iii<filter.getDimZ(); ++iii)
 				ErrVins[iii] = V[iii] - Vgps[iii]; //разница ошибок ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
-			
+
 		#if 0
 			for (int iii=0; iii<2; ++iii)
 				V[iii] -= filter.x[iii]; // коррекция скоростей ИНС
@@ -548,14 +570,11 @@ int main(int argc, char *argv[])
 		}
 	#endif
 		// Запись в файл навигационного решения (скорости, координаты, углы, ошибки по скоростям, ошибки по координатам)
-		
+
 		static FILE* navig_res;
 		if(!navig_res)
 		{
-			if (argc == 7) //если аргументом передан файл для записи результатов, записываем в него
-					navig_res=fopen(argv[6],"wt");
-			else // если нет, записываем в файл по умолчанию
-				navig_res=fopen("./data/Nav_res.csv","wt");
+			navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
@@ -571,7 +590,7 @@ int main(int argc, char *argv[])
 			fprintf(navig_res, "d_N;");
 			fprintf(navig_res, "\n");
 		}
-		
+
 		if(navig_res)
 		{
 			// Навигационные параметры
@@ -590,14 +609,13 @@ int main(int argc, char *argv[])
 			//Ошибки по координатам в м
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", CoordError[i]);
-			
+
 			fprintf(navig_res, "\n");
 		}
 #endif
 		fflush(navig_res);
 
-#if 1
-		//Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
+#if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
 		{
@@ -621,7 +639,7 @@ int main(int argc, char *argv[])
 			fprintf(for_Kalman, "Vn_gps");
 			fprintf(for_Kalman, "\n");
 		}
-		
+
 		if(for_Kalman)
 		{
 			fprintf(for_Kalman, "%d,", cur_time);
@@ -629,7 +647,7 @@ int main(int argc, char *argv[])
 			// Ускорения в опорной с.к
 			for(int i=0; i<3; ++i)
 				fprintf(for_Kalman, "%.10e,", Ao[i]);
-			// Асболютная (?) угловая скорость опорной с.к 
+			// Асболютная (?) угловая скорость опорной с.к
 			for(int i=0; i<3; ++i)
 				fprintf(for_Kalman, "%.10e,", omo[i]);
 			// Скорости в горизонте
@@ -644,7 +662,7 @@ int main(int argc, char *argv[])
 			//Скорости от GPS
 			for (int iii=0; iii<2; ++iii)
 				fprintf(for_Kalman, "%.10e,", Vgps[iii]);
-			
+
 			fprintf(for_Kalman, "\n");
 		}
 		fflush(for_Kalman);
@@ -667,7 +685,7 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "d_Pitch,");
 			fprintf(estimations, "\n");
 		}
-		
+
 		if(estimations)
 		{
 			fprintf(estimations, "%d,", cur_time);

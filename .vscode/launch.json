@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
             "args": [
-                "50", "0", "0", "0", "Data_files/data_acc_veloc_0_heading_50_freq_400_gps.bin"
+                "50", "0", "0", "0", "/home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/Data_files/TERM20250616144529640.log", "1", "1", "1", "1", "1"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
