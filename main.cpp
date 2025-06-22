@@ -110,8 +110,10 @@ int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, 
 		for (int ii=0; ii<3; ++ii)
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
-			Omb[ii] += AllowBiasGyr*BiasOmb[ii] + AllowRandGyr*RandOmb[ii];
 		}
+		Omb[0] += AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0];
+		Omb[1] += AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1];
+		Omb[2] += 0*AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2];
 		//добавление шума к показаниям СНС
 		for(int iii=0; iii<2; ++iii)
 		{
@@ -127,7 +129,7 @@ int Readfile(FILE* is, Ldoub* Ab, Ldoub* Omb) // Чтение сырых дан�
 {
 	int timestamp;
 	int res = fscanf(is, "%d;%lf;%lf;%lf;%lf;%lf;%lf\n", &timestamp, &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2]);
-	if (res == 7)
+	if (res == 6)
 	{
 		return res;
 	}
@@ -234,7 +236,7 @@ int main(int argc, char *argv[])
 	const Ldoub U = 7.27220521664304e-05;
 	const Ldoub rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
 	const Ldoub deg2rad = 1./rad2deg;
-	int freq1 = 100; // частота свехбыстрого цикла
+	int freq1 = 400; // частота свехбыстрого цикла
 	Ldoub h1 (1./freq1); // период дискретизации свехбыстрого цикла
 	int freq = freq1/4;//100; // частота измерений с инерциальных датчиков
 	Ldoub h (1./freq); //период дискретизации
@@ -297,8 +299,8 @@ int main(int argc, char *argv[])
 
 	bool derectNorm (true); //направление ортогонализации и нормализации
 
-	Ldoub kcor1 (0.006138995628986877); // метод наименьшей дисперсии (Быковский) программой на python
-	Ldoub kcor2 (11.54438988378206); // метод наименьшей дисперсии (Быковский) программой на python
+	Ldoub kcor1 (0.006138995628986877); // метод наименьшей дисперсии () программой на python
+	Ldoub kcor2 (11.54438988378206); // метод наименьшей дисперсии () программой на python
 	bool allowCorr (false); //разрешение на коррекцию
 	// Чтение из файла ускорений и угловых скоростей
 
@@ -312,8 +314,8 @@ int main(int argc, char *argv[])
 
 #if 1
 	FILE* file=fopen(argv[5], "rt");
-	//fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
-	int res = Readfile(file, Ab, Omb);
+	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
+	int res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb,Vgps);
 #else
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
 	#define FILE_STREAM
@@ -332,8 +334,8 @@ int main(int argc, char *argv[])
 	H[index_3(6, 1, 1)] = 1;
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[6*6] = {0};
-	q[index_3(6, 4, 4)] = 1e-17;
-	q[index_3(6, 5, 5)] = 1e-17;
+	q[index_3(6, 4, 4)] = 1e-19;
+	q[index_3(6, 5, 5)] = 1e-19;
 
 	Ldoub r[2*2] = {0.05, 0, 0, 0.05};
 
@@ -345,7 +347,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while(res == 7 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
+	while(res == 22 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
 	{ // цилк while для частоты 100 Гц, поэтому нельзя сделать общее чтение файла для выставки и навигации
 
 		// этап выставки
@@ -355,7 +357,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else
-			res = Readfile(file, Ab, Omb);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
 			#endif
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
 			++cur_time; // для 400 Гц
@@ -426,7 +428,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else //в противном случае, читаем, что есть
-			res = Readfile(file, Ab, Omb);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
 			#endif
 		#if 1
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
@@ -524,15 +526,15 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]); //Voy
 		filter.A[index_3(dim_state, 2, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 3)] = omo[2]; //Phi_oy
-		filter.A[index_3(dim_state, 2, 4)] = -cos(Orientation[0]);//d_omega_x
-		filter.A[index_3(dim_state, 2, 5)] = -sin(Orientation[0]);//d_omega_y
+		filter.A[index_3(dim_state, 2, 4)] = (-cos(Orientation[0]));//d_omega_x
+		filter.A[index_3(dim_state, 2, 5)] = (-sin(Orientation[0]));//d_omega_y
 		//Phi_oy
 		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]); //Vox
 		filter.A[index_3(dim_state, 3, 1)] = 0; //Voy
 		filter.A[index_3(dim_state, 3, 2)] = - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 3, 4)] = sin(Orientation[0]); //d_omega_x
-		filter.A[index_3(dim_state, 3, 5)] = -cos(Orientation[0]); //d_omega_y
+		filter.A[index_3(dim_state, 3, 4)] = (sin(Orientation[0])); //d_omega_x
+		filter.A[index_3(dim_state, 3, 5)] = (-cos(Orientation[0])); //d_omega_y
 		//Delta omega_x
 		filter.A[index_3(dim_state, 4, 0)] = 0; //Vox
 		filter.A[index_3(dim_state, 4, 1)] = 0; //Voy
@@ -615,7 +617,7 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 
-#if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
+#if 1 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
 		{
