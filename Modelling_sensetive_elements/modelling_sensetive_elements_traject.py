@@ -1,0 +1,308 @@
+'''
+моделируются показания Ч.Э. при полете по траектории с постоянной скорости с высотой H
+Самолетные оси: продольная -- y; нормальная -- z; по правому крылу -- x
+Файл со времен дипломного (или последнего курсового) проекта. Научный руководитель --- Быковский Александр Владимирович
+'''
+
+import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+def matrix_ll_b(psi, gamma, theta):
+    C_b_ll = np.array([
+        [np.cos(gamma)*np.cos(psi)+np.sin(gamma)*np.sin(theta)*np.sin(psi), np.cos(theta)*np.sin(psi), np.sin(gamma)*np.cos(psi)-np.cos(gamma)*np.sin(psi)*np.sin(theta)],
+        [-np.cos(gamma)*np.sin(psi)+np.sin(gamma)*np.sin(theta)*np.cos(psi), np.cos(theta)*np.cos(psi), -(np.sin(gamma)*np.sin(psi)+np.cos(gamma)*np.sin(theta)*np.cos(psi))],
+        [-np.sin(gamma)*np.cos(theta), np.sin(theta), np.cos(gamma)*np.cos(theta)]])
+    return C_b_ll.T
+# Высота полета
+hight = 0*8e1 #метры
+
+U = np.deg2rad(15)/3600 #угловая скорость Земли
+R = 6400*1e3
+R_e = R
+g_0 = 9.81
+h = 1e-2 #такт в секундах (100 Гц)
+phi = np.deg2rad(55)
+lmbda = np.deg2rad(33)
+a =	6378245 #большая полуось
+b = 6356856
+e = np.sqrt(1-b**2/a**2) #эксцентрисетет
+R_lambda = R_e/((1-e**2*np.sin(phi)**2)**(1/2)) #радиус запад-восток
+R_phi = R_e*(1-e**2)/((1-e**2*np.sin(phi)**2)**(3/2))#радиус север-юг
+g = g_0*(1 - 2*hight/R_e+0.75*e**2*(np.sin(lmbda)**2))
+
+V_abs = 100 #абсолютная линейная скорость м/с
+plotting = 0
+
+a_x_0 = 1e-4*g #смещения нуля акселерометров
+omega_x_0 = np.deg2rad(0.1)/3600
+mean = 0 # для моделирования шумма (с нулевым средним)
+
+'''
+задаю углы ориентации, в горизонте 0, курс любой, наример 150 градуса
+'''
+
+heading = np.deg2rad(50) #курс до разворота
+heading_turn = np.deg2rad(0) #угол, на сколько развернулись
+
+pitch = np.deg2rad(0)
+roll = np.deg2rad(0)
+time_turn = 2*60 #время разворота (будет в середине времени полета), секунды
+# time_turn = 10*h #время разворота (будет в середине времени полета), секунды
+time_to_align = int(5*60/h) #время выставки в тактах
+
+C_ll_b = matrix_ll_b(heading, roll, pitch) #матрица перехода
+
+t_line = 180*60 #время полета по прямолинейному участку 20 минут в секундах
+num_samples = int(t_line/h)*2 #кол-во тактов на 2 прямолинейных участка
+
+white_noise_acc_x = np.random.normal(mean, 1, size=num_samples)
+white_noise_acc_y = np.random.normal(mean, 1, size=num_samples)
+white_noise_acc_z = np.random.normal(mean, 1, size=num_samples)
+    
+white_noise_gyr_x = np.random.normal(mean, 1, size=num_samples)
+white_noise_gyr_y = np.random.normal(mean, 1, size=num_samples)
+white_noise_gyr_z = np.random.normal(mean, 1, size=num_samples)
+
+colour_noise_acc_x, colour_noise_acc_y, colour_noise_acc_z = np.zeros((3, num_samples))
+colour_noise_gyr_x, colour_noise_gyr_y, colour_noise_gyr_z = np.zeros((3, num_samples))
+std_acc=0.1*g*10**(-3)
+T_k_a = 1
+beta_acc = 1/T_k_a
+T_k_g = 2
+beta_gyr = 1/T_k_g
+std_gyr = 0.02 #в градусах в час, в функции переводится в радианы в секунду
+sko_gnss_n = 0.2 #in meter in seconds
+sko_gnss_d = sko_gnss_n/np.sqrt(h)
+# sko_gnss_d = 0.2
+sko_gnss_pos = 0.2/R_e/np.sqrt(h)
+#формирующий фильтр
+for i in range(1,num_samples):
+    #акселерометры
+    colour_noise_acc_x[i] = colour_noise_acc_x[i-1]*(1-beta_acc*h)+std_acc*np.sqrt(2*beta_acc*h)*white_noise_acc_x[i-1]
+    colour_noise_acc_y[i] = colour_noise_acc_y[i-1]*(1- beta_acc*h)+std_acc*np.sqrt(2*beta_acc*h)*white_noise_acc_y[i-1]
+    colour_noise_acc_z[i] = colour_noise_acc_z[i-1]*(1-beta_acc*h)+std_acc*np.sqrt(2*beta_acc*h)*white_noise_acc_z[i-1]
+    #гироскопы  
+    colour_noise_gyr_x[i] = colour_noise_gyr_x[i-1]*(1-beta_gyr*h)+std_gyr*np.sqrt(2*beta_gyr*h)*white_noise_gyr_x[i-1]
+    colour_noise_gyr_y[i] = colour_noise_gyr_y[i-1]*(1-beta_gyr*h)+std_gyr*np.sqrt(2*beta_gyr*h)*white_noise_gyr_y[i-1]
+    colour_noise_gyr_z[i] = colour_noise_gyr_z[i-1]*(1-beta_gyr*h)+std_gyr*np.sqrt(2*beta_gyr*h)*white_noise_gyr_z[i-1]
+
+#Шум акселерометров и гирскопов
+A_noise = np.zeros((3, num_samples)) # случайные шумы в связанных осях
+A_noise[0,:] += colour_noise_acc_x
+A_noise[1,:] += colour_noise_acc_y
+A_noise[2,:] += colour_noise_acc_z
+A_o_noise = np.zeros((3, num_samples)) # случайные шумы в осях опорного трехгранника
+
+Omega_noise = np.zeros((3, num_samples)) # случайные шумы в связанных осях
+Omega_noise[0, :] += colour_noise_gyr_x
+Omega_noise[1, :] += colour_noise_gyr_y
+Omega_noise[2, :] += colour_noise_gyr_z
+Omega_o_noise = np.zeros((3, num_samples)) # случайные шумы в осях опорного трехгранника
+
+# Смещение нулей 
+# акселерометров
+A_bias = np.zeros((3, num_samples))
+A_bias[0, :] = a_x_0
+A_bias[1, :] = a_x_0
+A_bias[2, :] = a_x_0
+# гироскопов
+Omega_bias = np.zeros((3, num_samples))
+Omega_bias[0, :] = omega_x_0
+Omega_bias[1, :] = omega_x_0
+Omega_bias[2, :] = omega_x_0
+
+psi = np.zeros(num_samples) #массив для графика угла курса
+Velocity = np.zeros((3, num_samples) ) # V_E, V_N, V_up
+H = np.zeros(num_samples) # массив курса в радианах
+coord = np.zeros((2, num_samples) ) # широта, долгота
+coord[0,0] = phi
+coord[1,0] = lmbda
+
+# '''
+# первый прямолинейный участок (до разворота) (псле выставки, во время выставки все неподвижно)
+Velocity[0, time_to_align:num_samples//2- int(time_turn/h//2)] = V_abs*np.sin(heading) #V_E
+Velocity[1, time_to_align:num_samples//2 - int(time_turn/h//2)] = V_abs*np.cos(heading) #V_N
+psi[:num_samples//2- int(time_turn/h//2)] = heading
+
+# разворот
+j = 1
+for i in range(num_samples//2 - int(time_turn/h//2), num_samples//2 + int(time_turn/h)//2):
+    delta_heading = j*h*heading_turn/time_turn
+    psi[i] = heading + delta_heading
+    Velocity[0, i] =  V_abs*np.sin(psi[i])
+    Velocity[1, i] =  V_abs*np.cos(psi[i])
+    j+=1
+
+# второй прямолинейный участок
+Velocity[0, -num_samples//2 + int(time_turn/h//2):] = V_abs*np.sin(heading + heading_turn) #V_E
+Velocity[1, -num_samples//2 + int(time_turn/h//2):] = V_abs*np.cos(heading + heading_turn) #V_N
+psi[-num_samples//2 + int(time_turn/h//2):] = heading + heading_turn
+
+# '''
+# формируем географические координаты
+for i in range(1, np.size(Velocity[0, :])):
+    coord[0, i] = coord[0, i-1] + Velocity[1,i]*h/(R + hight) #phi
+    coord[1, i] = coord[1, i-1] + Velocity[0,i]*h/((R+ hight)*np.cos(coord[0, i]) ) #lambda
+
+A_b = np.zeros((3, num_samples)) # асболютные ускорения (с акселерометров) в связанных осях
+a_o = np.zeros((3, num_samples)) # асболютные ускорения (с акселерометров) в проекциях на оси опорного трехгранника
+a_o_bias = np.zeros((3, num_samples)) # дрейфы акселерометров в проекциях на оси опорноготрехгранника
+
+
+Omega_b = np.zeros((3, num_samples)) # абсолютные угловые скорости (с ДУС) в связанных осях
+omega_o = np.zeros((3, num_samples)) # абсолютные угловые скорости (с ДУС) в проекциях на оси опроного трехгранника
+omega_o_bias = np.zeros((3, num_samples)) # дрейфы гироскопов в проекциях на оси опорноготрехгранника
+
+
+
+'''первый прямолинейный участок'''
+C_ll_b = matrix_ll_b(heading, roll, pitch) #матрица перехода
+
+for i in range(num_samples//2 - int(time_turn/h//2)):
+    pass
+    # g = g_0*(1 - 2*hight/R_e+0.75*e**2*(np.sin(coord[1, i])**2))
+    g = g_0*(1 - 2*hight/R_e+0.75*e**2*(np.sin(coord[0, i])**2))
+    a_o[:, i] = np.array([0, 0, g])
+    a_o_bias[:, i] = C_ll_b.T @ A_bias[:, i]   
+    A_o_noise[:, i] = C_ll_b.T @ A_noise[:, i] # случайные шумы в опорных осях
+    Omega_o_noise[:, i] = C_ll_b.T @ Omega_noise[:, i]   # случайные шумы в опорных осях 
+    omega_e = np.array([0, U*np.cos(coord[0, i]), U*np.sin(coord[0, i])]) #матрица-строка переносной угл. скор-ть
+    omega_o[:, i] = omega_e + np.array([-Velocity[1, i]/(R + hight), Velocity[0, i]/(R + hight), Velocity[0, i]/(R + hight)*np.tan(coord[0, i])])
+    omega_o_bias[:, i] = C_ll_b.T @ Omega_bias[:, i] 
+    A_b[:, i] = np.round(C_ll_b @ (a_o[:, i] + 2*np.cross(omega_e, Velocity[:, i])), 10)
+    Omega_b[:, i] = (C_ll_b @ omega_o[:, i])
+# plt.plot(A_b[1,:])
+# plt.show()
+
+'''
+поворот
+'''
+j = 1
+for i in range(num_samples//2 - int(time_turn/h//2), num_samples//2 + int(time_turn/h)//2):
+    delta_heading = j*h*heading_turn/time_turn
+    C_ll_b = matrix_ll_b(heading + delta_heading, roll, pitch) #матрица перехода
+    a_o[:, i] = np.array([0, 0, g])    
+    a_o_bias[:, i] = C_ll_b.T @ A_bias[:, i]
+    A_o_noise[:, i] = C_ll_b.T @ A_noise[:, i] # случайные шумы в опорных осях
+    Omega_o_noise[:, i] = C_ll_b.T @ Omega_noise[:, i]    # случайные шумы в опорных осях
+    omega_o_bias[:, i] = C_ll_b.T @ Omega_bias[:, i] 
+    omega_e = np.array([0, U*np.cos(coord[0, i]), U*np.sin(coord[0, i])]) #матрица-строка переносной угл. скор-ть
+    omega_o[:, i] = omega_e + np.array([-Velocity[1, i]/(R + hight), Velocity[0, i]/(R + hight), Velocity[0, i]/(R + hight)*np.tan(coord[0, i])])
+    A_b[:, i] = np.round(C_ll_b @ (a_o[:, i] + 2*np.cross(omega_e, Velocity[:, i])), 10)
+    Omega_b[:, i] = (C_ll_b @ omega_o[:, i])
+    j += 1
+
+'''второй прямолинейный участок'''
+C_ll_b = matrix_ll_b(heading + heading_turn, roll, pitch) #матрица перехода
+
+# omega_xb[-num_samples//2:] = U*np.cos(coord[0, -num_samples//2:])*np.sin(heading + heading_turn) - V_abs/(R + hight)
+# omega_yb[-num_samples//2:] = U*np.cos(coord[0, -num_samples//2:])*np.cos(heading + heading_turn) 
+for i in range(num_samples//2 + int(time_turn/h)//2, num_samples):
+    pass
+    # g = g_0*(1 - 2*hight/R_e+0.75*e**2*(np.sin(coord[1, i])**2))
+    g = g_0*(1 - 2*hight/R_e+0.75*e**2*(np.sin(coord[0, i])**2))
+    a_o[:, i] = np.array([0, 0, g])    
+    a_o_bias[:, i] = C_ll_b.T @ A_bias[:, i] 
+    A_o_noise[:, i] = C_ll_b.T @ A_noise[:, i] # случайные шумы в опорных осях
+    Omega_o_noise[:, i] = C_ll_b.T @ Omega_noise[:, i] # случайные шумы в опорных осях
+    omega_o_bias[:, i] = C_ll_b.T @ Omega_bias[:, i] 
+    omega_e = np.array([0, U*np.cos(coord[0, i]), U*np.sin(coord[0, i])]) #матрица-строка переносной угл. скор-ть
+    omega_o[:, i] = omega_e + np.array([-Velocity[1, i]/(R + hight), Velocity[0, i]/(R + hight), Velocity[0, i]/(R + hight)*np.tan(coord[0, i])])
+    A_b[:, i] = np.round(C_ll_b @ (a_o[:, i] + 2*np.cross(omega_e, Velocity[:, i])), 10)
+    Omega_b[:, i] = (C_ll_b @ omega_o[:, i])
+# plt.plot(A_b[1,:])
+# plt.show()
+std_V = 0.1#/np.sqrt(h)
+Velocity_gnss = Velocity + np.random.normal(scale = std_V, size = np.shape(Velocity))
+
+
+'''
+vocab = {"A_b":A_b, "a_o":a_o, "a_o_bias":a_o_bias, "A_o_noise":A_o_noise, "Omega_b":Omega_b, "omega_o":omega_o, "omega_o_bias":omega_o_bias, "Omega_o_noise":Omega_o_noise,
+          "A_noise":A_noise, "Omega_noise":Omega_noise,  "heading_mas":psi, "heading":heading, "pitch":pitch, "roll":roll,"coord":coord, 
+         "heading_turn":heading_turn, "Velocity":Velocity, "Velocity_gnss":Velocity_gnss, "Hight":hight, "num_samples":num_samples,
+         "t_flight":2*t_line, "A_bias":A_bias, "Omega_bias":Omega_bias, "frequency":1/h, "time_to_align":time_to_align}
+
+
+with open("./Data_files/modelled_indications.pkl", "wb") as file:
+    pickle.dump(vocab, file)
+'''
+with (open("./Data_files/data_acc.csv", "w") as file):
+    for j in range(np.shape(A_b)[1]):
+        for i in range(np.shape(A_b)[0]):
+            file.write(f"{A_b[i,0]} ") # ускорения
+        for i in range(np.shape(A_b)[0]):
+            file.write(f"{Omega_b[i,0]} ") # Угловые скорости
+        file.write("\n")
+
+
+print(f"""Все
+закончилось 
+благополучно!""")
+
+if not plotting:
+    exit(0)
+
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+
+time = np.linspace(0, 2*t_line/60, num_samples)
+
+# '''
+# Скорости
+fig = go.Figure()
+fig.add_trace(go.Scatter(x = time, y = Velocity[0, :], name="$V_E$"))
+fig.add_trace(go.Scatter(x = time, y = Velocity[1, :], name="$V_N$"))
+# fig.add_trace(go.Scatter(x = time, y = x_est[-1,:], name="$\delta \omega_{oz}$"))
+fig_name = "Скорости"
+fig.update_layout(title= fig_name,
+                  xaxis_title="Время, мин",
+                  yaxis_title="V, м/с")
+fig.show()
+
+
+# Траектория
+fig = go.Figure()
+fig.add_trace(go.Scatter(x = np.rad2deg(coord[1, :]), y = np.rad2deg(coord[0, :])))
+# fig.add_trace(go.Scatter(x = time, y = x_est[-1,:], name="$\delta \omega_{oz}$"))
+fig_name = "Траектория"
+fig.update_layout(title= fig_name,
+                  xaxis_title="Долгота, град",
+                  yaxis_title="Широта, град")
+fig.show()
+
+# показания акселерометров
+fig = make_subplots(rows=3, cols=1, subplot_titles=("Ax", "Ay", 
+                                                        "Az"))
+fig.add_trace(go.Scatter(x = time, y = A_b[0,:], name=f"Ax"),1, 1)
+fig.add_trace(go.Scatter(x = time, y = A_b[1,:], name=f"Ay"), 2, 1)
+fig.add_trace(go.Scatter(x = time, y = A_b[2,:], name=f"Az"), 3, 1)
+fig_name = "Показания акселерометров"
+fig.update_layout(title= fig_name,
+                  xaxis_title="Время, мин",
+                  yaxis_title="м/(с^2)")
+fig.show()
+
+# показания гироскопов
+fig = make_subplots(rows=3, cols=1, subplot_titles=("$\Omega_x$", "$\Omega_y$", 
+                                                        "$\Omega_z$"))
+fig.add_trace(go.Scatter(x = time, y = np.rad2deg(Omega_b[0,:])*3600, name=f"$\Omega_x$"),1, 1)
+fig.add_trace(go.Scatter(x = time, y = np.rad2deg(Omega_b[1,:])*3600, name=f"$\Omega_y$"), 2, 1)
+fig.add_trace(go.Scatter(x = time, y = np.rad2deg(Omega_b[2,:])*3600, name="$\Omega_z$"), 3, 1)
+fig_name = "Показания гироскопов"
+fig.update_layout(title= fig_name,
+                  xaxis_title="Время, мин",
+                  yaxis_title="град/ч")
+fig.show()
+
+# Углы ориентации
+fig = make_subplots(rows=3, cols=1, subplot_titles=("Угол курса", "Угол крена", 
+                                                        "Угол тангажа"))
+fig.add_trace(go.Scatter(x = time, y = np.rad2deg(psi), name=f"$\psi$"),1, 1)
+fig.add_trace(go.Scatter(x = time, y = np.ones(num_samples)*np.rad2deg(roll), name=f"$\gamma$"), 2, 1)
+fig.add_trace(go.Scatter(x = time, y = np.ones(num_samples)*np.rad2deg(pitch), name="$\\theta$"), 3, 1)
+fig_name = "Углы ориентации"
+fig.update_layout(title= fig_name,
+                  xaxis_title="Время, мин",
+                  yaxis_title="град")
+fig.show()
+# '''

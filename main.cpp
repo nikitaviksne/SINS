@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
 	Ldoub V0[2] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0)}; // линейные скорости E; N
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
 	// массивы для выходных значений
-	Ldoub V[2] = {(Ldoub) V0[0], (Ldoub) V0[1]}; // линейные скорости E; N
+	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up или X; Y; Z
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
@@ -273,11 +273,11 @@ int main(int argc, char *argv[])
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
-	bool AllowBiasAcc = false;
-	bool AllowBiasGyr = false;
-	bool AllowRandAcc = false;
-	bool AllowRandGyr = false;
-	bool AllowRandVgps = false;
+	bool AllowBiasAcc = true;
+	bool AllowBiasGyr = true;
+	bool AllowRandAcc = true;
+	bool AllowRandGyr = true;
+	bool AllowRandVgps = true;
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
@@ -301,21 +301,31 @@ int main(int argc, char *argv[])
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений 
 	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
 	///*
-	int dim_state (6); //размер вектора состояния
-	int dim_sense (2); //размер вектора измерения
+	const int dim_state (6); //размер вектора состояния
+	const int dim_sense (2); //размер вектора измерения
 	//*/
-	AdaptiveKalman filter(6, 2); //Создаю объект обычного фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
-	Ldoub x0[6] = {V[0], V[1], 0}; //Начальные оценочные значения двектора состояния
-	Ldoub H[2*6] = {0}; //матрица наблюдения
-	H[index_3(6, 0, 0)] = 1;
-	H[index_3(6, 1, 1)] = 1;
+	AdaptiveKalman filter(dim_state, dim_sense); //Создаю объект обычного фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
+#if 1 //Для вектора состояния 6 (2 канала)
+	Ldoub x0[dim_state] = {V[0], V[1], 0}; //Начальные оценочные значения двектора состояния
+	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
+	H[index_3(dim_state, 0, 0)] = 1;
+	H[index_3(dim_state, 1, 1)] = 1;
 	//Матрца ковариации входных шумов (модели)
-	Ldoub q[6*6] = {0};
+	Ldoub q[dim_state*dim_state] = {0};
 	q[28] = 1e-16;
 	q[35] = 1e-16;
 
-	Ldoub r[2*2] = {0.05*0.05, 0, 0, 0.05*0.05};
+	Ldoub r[dim_sense*dim_sense] = {0.05*0.05, 0, 0, 0.05*0.05};
+#else //Для вектора состояния 3 (1 канал)
+	Ldoub x0[dim_state] = {V[0], 0}; //Начальные оценочные значения двектора состояния
+	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
+	H[index_3(dim_state, 0, 0)] = 1;
+	//Матрца ковариации входных шумов (модели)
+	Ldoub q[dim_state*dim_state] = {0};
+	q[0] = 1e-16;
 
+	Ldoub r[dim_sense*dim_sense] = {0.05*0.05};
+#endif
 #if 0
 	//Для лучшей обусловленности матрицы HPH_t увеличиваю начальные значения априорной ошибки
 	for (int iii=0; iii<filter.getDimX()*filter.getDimX(); ++iii)
@@ -465,7 +475,7 @@ int main(int argc, char *argv[])
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
-	#if 1
+	#if 1 //Большая модель (по полным уравнениям) 2 канала
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
 		// Delta dot V_ox
 		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]) ; //Vox
@@ -509,7 +519,19 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 3)] = 0; //Phi_oy
 		filter.A[index_3(dim_state, 5, 4)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 5, 5)] = 0; //d_omega_y
-
+	#else //Упрощенная модель ошибок (1 канал, размерность 3*3)
+		filter.A[index_3(dim_state, 0, 0)] = 0 ;
+		filter.A[index_3(dim_state, 0, 1)] = - Ao[2];
+		filter.A[index_3(dim_state, 0, 2)] = 0; 
+		//
+		filter.A[index_3(dim_state, 1, 0)] = 1/(R+Coordinates[2]) ;
+		filter.A[index_3(dim_state, 1, 1)] = 0;
+		filter.A[index_3(dim_state, 1, 2)] = 1; 
+		//
+		filter.A[index_3(dim_state, 2, 0)] = 0;
+		filter.A[index_3(dim_state, 2, 1)] = 0;
+		filter.A[index_3(dim_state, 2, 2)] = 0; 
+	#endif 
 		if (!filter.init) //Если ранее не было инициализации, то инициализируем
 		{
 			filter.Init(x0, q, H);
@@ -519,14 +541,14 @@ int main(int argc, char *argv[])
 			for (int iii =0; iii < filter.getDimX()*filter.getDimX(); ++iii) //вычисляю матрицу перехода Phi
 				filter.Phi[iii] = filter.I[iii] + filter.A[iii] * h; //не забываем умножить на такт интегрирования
 			
-			Ldoub ErrVins[2] = {V[0] - Vgps[0], V[1] - Vgps[1]}; //разница ошибок ИНС и СНС
+			Ldoub ErrVins[dim_sense] = {V[0] - Vgps[0], V[1] - Vgps[1]}; //разница ошибок ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
 		}
-	#endif
+	
 		// Запись в файл навигационного решения (скорости, координаты, углы, ошибки по скоростям, ошибки по координатам)
-		
+
 		static FILE* navig_res;
 		if(!navig_res)
 		{
@@ -571,10 +593,11 @@ int main(int argc, char *argv[])
 			
 			fprintf(navig_res, "\n");
 		}
+
 #endif
 		fflush(navig_res);
 
-#if 1
+#if 0
 		//Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
@@ -628,7 +651,7 @@ int main(int argc, char *argv[])
 		fflush(for_Kalman);
 #endif
 
-#if 1
+#if 1 //Для вектроа состояний размера 6
 		//Запись в файл оцененного вектора состояния
 		static FILE* estimations;
 		if(!estimations)
@@ -640,6 +663,29 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "Phi_e,");
 			fprintf(estimations, "Phi_n,");
 			fprintf(estimations, "d_omega_x,");
+			fprintf(estimations, "d_omega_y,");
+			fprintf(estimations, "\n");
+		}
+		
+		if(estimations)
+		{
+			fprintf(estimations, "%d,", cur_time);
+
+			// весь вектор состояния
+			for(int i=0; i<dim_state; ++i)
+				fprintf(estimations, "%.10e,", filter.x[i]);
+			fprintf(estimations, "\n");
+		}
+		fflush(estimations);
+#else //Для вектроа состояний размера 3
+		//Запись в файл оцененного вектора состояния
+		static FILE* estimations;
+		if(!estimations)
+		{
+			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
+			// Шапка
+			fprintf(estimations, "Ve,");
+			fprintf(estimations, "Phi_n,");
 			fprintf(estimations, "d_omega_y,");
 			fprintf(estimations, "\n");
 		}
