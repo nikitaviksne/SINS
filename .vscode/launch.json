@@ -1,41 +1,40 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "gdb Launch",
-      "program": "${workspaceRoot}",
-      "args": ["-I", "${workspaceRoot}/include", "-I", "${workspaceRoot}/", "main.cpp", "matrix.cpp", "-g", "-o", "a.out"],
-      "stopAtEntry": false,
-      "cwd": "${workspaceRoot}",
-      "environment": [],
-      "externalConsole": true,
-      "MIMode": "gdb",
-      "setupCommands": [
+    "version": "0.2.0",
+    "configurations": [
         {
-          "description": "Enable pretty-priting for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "50",
+                "0",
+                "0",
+                "0",
+                "/home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/Modelling_sensetive_elements/Data_files/data_acc_veloc_0_heading_50_freq_400_gps.csv",
+                "1",
+                "1",
+                "1",
+                "1",
+                "1"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
-      ]
-    },
-    {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "cppdbg",
-      "request": "launch",
-      "args": ["-I", "${workspaceRoot}/include", "-I", "${workspaceRoot}/", "main.cpp", "matrix.cpp", "-g", "-o", "a.out"],
-      "stopAtEntry": false,
-      "externalConsole": false,
-      "cwd": "/home/nikita_viksne/InertialNavigation",
-      "program": "/home/nikita_viksne/InertialNavigation/build/Debug/outDebug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
-    }
-  ]
+    ]
 }

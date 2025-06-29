@@ -8,7 +8,7 @@
 #include <stdio.h>
 #endif
 
-void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw)
+void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw, Ldoub k2, Ldoub* DVerr, bool allowCorr)
 {
     Ldoub Thet4[3] = {0}; //Вектор Эйлера
 	for (int mmm=0; mmm<3; ++mmm)
@@ -57,8 +57,8 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 	Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
 	Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]); // tan(phi0)
 
-	omo[0] = (Ldoub) Omo[0];
-    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]);
+	omo[0] = (Ldoub) Omo[0] - allowCorr * k2/Rphi * DVerr[1]; 
+    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]) + allowCorr * k2/Rphi * DVerr[0];
     omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
 	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
 	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;

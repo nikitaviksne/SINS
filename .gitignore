@@ -1,4 +1,6 @@
 data/*
+Data_files
+Modelling_sensetive_elements/Data_files
 # object files (.o) and output (executible) files (.out)
 *.o*
 # settings vscod
