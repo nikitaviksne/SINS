@@ -32,7 +32,7 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
 	aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
 	aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
-	#else // по соображениям теоретической механики. Ускорение Кориолиса равно удвоенному векторному произведению абсолютной угловой скорости подвижного базиса на относительнуюлинейную скорость
+	#else // по соображениям теоретической механики. Ускорение Кориолиса равно удвоенному векторному произведению переносной угловой скорости подвижного базиса на относительную линейную скорость
 	aCoriolis[0] = (Ldoub) 2 * ((Ldoub) Omo[1]*V[2] - (Ldoub) Omo[2]*V[1]);
 	aCoriolis[1] = (Ldoub) 2 * ((Ldoub) -Omo[0]*V[2] + (Ldoub) Omo[2]*V[0]);
 	aCoriolis[2] = (Ldoub) 2 * ((Ldoub) Omo[0]*V[1] - (Ldoub) Omo[1]*V[0]);

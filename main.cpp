@@ -20,9 +20,25 @@
 #include <stdio.h>
 #endif
 
-
-void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
+void MatrGE(Ldoub phi, Ldoub lambda, Ldoub* C)
 {
+	/*Матрица ориентации между географической (G -- Geodetic) с.к и земной экваториальной (E -- ECEF) с.к */
+	C[0] = (Ldoub) -sin(lambda);
+	C[1] = (Ldoub) cos(lambda);
+	C[2] = (Ldoub) 0;
+	//
+	C[3] = (Ldoub) -cos(lambda)*sin(phi);
+	C[4] = (Ldoub) -sin(phi)*sin(lambda);
+	C[5] = (Ldoub) cos(phi);
+	//
+	C[6] = (Ldoub) cos(lambda)*cos(phi);
+	C[7] = (Ldoub) sin(lambda)*cos(phi);
+	C[8] = (Ldoub) sin(phi);
+}
+
+void MatrGB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
+{
+	/*Матрица ориентации между географической с.к (G -- Geodetic) и связанной системой координат (B -- Body)*/
 	C[0] = (Ldoub) cos(R) * cos(H) + sin(R)*sin(H)* sin(P);
 	C[1] = (Ldoub) sin(R) * cos(H)*sin(P) - cos(R)*sin(H);
 	C[2] = (Ldoub) -sin(R) * cos(P);
@@ -245,6 +261,8 @@ int main(int argc, char *argv[])
 	Ldoub Rlambda;
 	Ldoub Rphi;
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
+	Ldoub lambda0 = (Ldoub) 33*deg2rad;
+	Ldoub height0 (0);
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
 	Ldoub H0 = (Ldoub) (strtod(argv[1], NULL))*deg2rad;
@@ -256,9 +274,8 @@ int main(int argc, char *argv[])
 
 	Ldoub Vgps[2] = {0};
 	Ldoub Cnb[9];
-	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
+	MatrGB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
-	Ldoub lambda0 = (Ldoub) 33*deg2rad;
 	Ldoub DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
 	Ldoub Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
@@ -276,18 +293,20 @@ int main(int argc, char *argv[])
 	Ldoub Cbn[9] = {0};
 	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной системы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
-	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
+	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости X; Y; Z
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
 	Ldoub ErrVins[3] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок)
 	// массивы для выходных значений
+	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(phi0)*sin(phi0));
+	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(phi0)*sin(phi0)) * (1.-e*e*sin(phi0)*sin(phi0)));
+
 	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 
-	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
+	Ldoub Coordinates[3] = {(Rlambda + height0)*cos(phi0)*cos(lambda0), (Rlambda + height0)*cos(phi0)*sin(lambda0), (Rlambda + height0 - Rlambda*pow(e,2))*sin(phi0)}; // Кординаты в экваториальной системе координат: X, Y и Z
 	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
 
-	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+	
 
 	bool AllowBiasAcc = (bool) (strtod(argv[6], NULL));
 	bool AllowBiasGyr = (bool) (strtod(argv[7], NULL));
@@ -366,7 +385,7 @@ int main(int argc, char *argv[])
 			#else
 			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
 			#endif
-			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
+			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn); //сначала выставляемся в географической системе координат, потом перейдем в экваториальную
 			++cur_time; // для 400 Гц
 			/*
 			printf("Mean Omb\n");
@@ -398,15 +417,14 @@ int main(int argc, char *argv[])
 				printf("roll (degrees) = %.30f Error = %f\n", Roll*rad2deg, DeltaRoll*rad2deg);
 				printf("pitch (degrees) = %.30f Error = %f\n", Pitch*rad2deg, DeltaPitch*rad2deg);
 				AlignmentContinue = false;
-				Transpose2M(Cbn, Cib, 3); // начальное значение Cib; Cib(0)
-				//Transpose(Cib,3);
-				cur_time = 0; // для 100 Гц
+				//формируем матрицу между географической и экваториальной
+				Ldoub Cge[9] = {0};
+				MatrGE(phi0, lambda0, Cge);
+				Ldoub Cbg[9] = {0}; // Матрица перехода из Geodetic в Body (транспонированная матрица выставки)
+				Transpose2M(Cbn, Cbg, 3);
 
-				Ldoub gravity[3] = {0, 0, g}; //ускорения силы тяжести в проекциях на оси опорной системы координат (географической)
-				Ldoub ErrAcc[3] = {0}; //Ошибки акселерометров (нужны для невыставки)
-				MulMatrD(Cib, gravity, ErrAcc,3,3,1); //здесь ErrAcc как временная матрица, а Cib=(Cbn)^t в начальный момент времени
-				for (int iii=0; iii<3; ++iii)
-					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
+				MulMatrD(Cbg, Cge, Cib, 3, 3, 3); //получаем матрицу перехода из связанной в экваториальную. Заодно сразу эту матрицу берем за начальное значение Cib; Cib(0)
+				cur_time = 0; // для 100 Гц
 #if 0
 				//начальные значения ошибок ориентации (для вектора состояния)
 				x0[2] = -1e-4/g;
@@ -416,7 +434,6 @@ int main(int argc, char *argv[])
 			}
 
 		}
-#if 1
 		Ldoub MeanAlpha[3] = {0};//осредненные малые приращения углов (псевдокоординаты)
 		Ldoub MeanW[3] = {0}; //осредненные малые приращения скоростей
 
@@ -558,7 +575,7 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 4)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 5, 5)] = 0; //d_omega_y
 	#else //ветрок состояния 3
-		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
+		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
 		filter.A[index_3(dim_state, 0, 2)] = 0; //d_omega_N
 		//
@@ -635,7 +652,7 @@ int main(int argc, char *argv[])
 			fprintf(navig_res, "\n");
 		}
 
-#endif
+	#endif
 		fflush(navig_res);
 
 #if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
@@ -692,14 +709,13 @@ int main(int argc, char *argv[])
 #endif
 
 
-#if 1 
+#if 1 //Для вектора размерности 6
 		//Запись в файл оцененного вектора состояния
 		static FILE* estimations;
 		if(!estimations)
 		{
 			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
 			// Шапка
-		#if 1 //Для вектора состояния размерности 6
 			fprintf(estimations, "Ve,");
 			fprintf(estimations, "Vn,");
 			fprintf(estimations, "Phi_e,");
@@ -709,14 +725,6 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "d_Roll,");
 			fprintf(estimations, "d_Pitch,");
 			fprintf(estimations, "\n");
-		#else
-			fprintf(estimations, "Ve,");
-			fprintf(estimations, "Phi_n,");
-			fprintf(estimations, "d_omega_y,");
-			fprintf(estimations, "d_Roll,");
-			fprintf(estimations, "d_Pitch,");
-			fprintf(estimations, "\n");
-		#endif
 		}
 
 		if(estimations)
@@ -733,7 +741,7 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "\n");
 		}
 		fflush(estimations);
-#else //Для вектроа состояний размера 3
+#else //Для вектора состояний размера 3
 		//Запись в файл оцененного вектора состояния
 		static FILE* estimations;
 		if(!estimations)
