@@ -48,14 +48,14 @@ C_b_n = np.array([[],
 '''
 
 Vabs = 0 # модуль конечной линейной скорости, м/с
-phi0 = np.deg2rad(55)
+phi0 = np.deg2rad(0)
 
 '''задаем ориентацию объекта'''
-heading = np.deg2rad(50)
+heading = np.deg2rad(0)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
-file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading))}_freq_400_gps.csv"
+file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading))}_eqautor_grinvich_freq_400_gps.csv"
 C_n_b = matrix_o_b(heading, roll, pitch)
 
 '''Систематические дрейфы'''

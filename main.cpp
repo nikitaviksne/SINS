@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
 {
 	//инициализация необходимых переменных и констант
 	const Ldoub g = 9.81;
-	const Ldoub a = 6378245;
+	const Ldoub a = 6378136;//6378245;
 	const Ldoub b = 6356856;
 	const Ldoub e = sqrt(1 - b*b/a/a);
 	const Ldoub R = 6400e3;
@@ -252,6 +252,8 @@ int main(int argc, char *argv[])
 	const Ldoub U = 7.27220521664304e-05;
 	const Ldoub rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
 	const Ldoub deg2rad = 1./rad2deg;
+	const Ldoub C20 = -1082.6257e-6; 
+	const Ldoub mu = 398600.44e9;//m^3/s^2
 	int freq1 = 400; // частота свехбыстрого цикла
 	Ldoub h1 (1./freq1); // период дискретизации свехбыстрого цикла
 	int freq = freq1/4;//100; // частота измерений с инерциальных датчиков
@@ -260,8 +262,8 @@ int main(int argc, char *argv[])
 	int t_alignment = (int) 5*60*freq1; // время выставки в тактах
 	Ldoub Rlambda;
 	Ldoub Rphi;
-	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
-	Ldoub lambda0 = (Ldoub) 33*deg2rad;
+	Ldoub phi0 = (Ldoub) 0*deg2rad;// и для моделирования
+	Ldoub lambda0 = (Ldoub) 0*deg2rad;
 	Ldoub height0 (0);
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
@@ -522,14 +524,14 @@ int main(int argc, char *argv[])
 		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 
 		/*Решение задачи навигации*/
-		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
+		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, C20, mu, a, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
 		++cur_time;
 
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
-	#if 1
+	#if 0
 	#if 1 //Модель для вектрора состояния 6
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
 		// Delta dot V_ox
@@ -607,7 +609,7 @@ int main(int argc, char *argv[])
 				V[iii] -= filter.x[iii]; // коррекция скоростей ИНС
 		#endif
 		}
-	
+	#endif
 		// Запись в файл навигационного решения (скорости, координаты, углы, ошибки по скоростям, ошибки по координатам)
 
 		static FILE* navig_res;
@@ -615,18 +617,19 @@ int main(int argc, char *argv[])
 		{
 			navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка
-			fprintf(navig_res, "Ve;");
-			fprintf(navig_res, "Vn;");
-			fprintf(navig_res, "Phi;");
-			fprintf(navig_res, "Lambda;");
-			fprintf(navig_res, "Height;");
+			fprintf(navig_res, "Vx;");
+			fprintf(navig_res, "Vy;");
+			fprintf(navig_res, "Vz;");
+			fprintf(navig_res, "X;");
+			fprintf(navig_res, "Y;");
+			fprintf(navig_res, "Z;");
 			fprintf(navig_res, "Heading;");
 			fprintf(navig_res, "Roll;");
 			fprintf(navig_res, "Pitch;");
-			fprintf(navig_res, "d_VE;");
-			fprintf(navig_res, "d_VN;");
-			fprintf(navig_res, "d_E;");
-			fprintf(navig_res, "d_N;");
+			fprintf(navig_res, "d_Vx;");
+			fprintf(navig_res, "d_Vy;");
+			fprintf(navig_res, "d_X;");
+			fprintf(navig_res, "d_Y;");
 			fprintf(navig_res, "\n");
 		}
 
@@ -634,7 +637,7 @@ int main(int argc, char *argv[])
 		{
 			// Навигационные параметры
 			// Скорости
-			for(int i=0; i<2; ++i)
+			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", V[i]);
 			// Координаты
 			for(int i=0; i<3; ++i)
@@ -651,8 +654,6 @@ int main(int argc, char *argv[])
 
 			fprintf(navig_res, "\n");
 		}
-
-	#endif
 		fflush(navig_res);
 
 #if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
@@ -716,10 +717,10 @@ int main(int argc, char *argv[])
 		{
 			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
 			// Шапка
-			fprintf(estimations, "Ve,");
-			fprintf(estimations, "Vn,");
-			fprintf(estimations, "Phi_e,");
-			fprintf(estimations, "Phi_n,");
+			fprintf(estimations, "Vx,");
+			fprintf(estimations, "Vy,");
+			fprintf(estimations, "Phi_x,");
+			fprintf(estimations, "Phi_y,");
 			fprintf(estimations, "d_omega_x,");
 			fprintf(estimations, "d_omega_y,");
 			fprintf(estimations, "d_Roll,");

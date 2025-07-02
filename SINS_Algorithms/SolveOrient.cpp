@@ -53,16 +53,17 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 	//переприсваивание Cib = tempCib идет ниже, вместе с Cin
 	
 	//Вычисление переносных, относительных и абсолютных угловых скоростей опопрной системы координат
-	Omo[0] = (Ldoub) -V[1]/(Rphi + Coordinates[2]);
-	Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
-	Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]); // tan(phi0)
+	Omo[0] = (Ldoub) 0; // (Ldoub) -V[1]/(Rphi + Coordinates[2]);
+	Omo[1] = (Ldoub) 0; // (Ldoub) V[0]/(Rlambda + Coordinates[2]);
+	Omo[2] = (Ldoub) 0; // (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]); // tan(phi0)
 
 	omo[0] = (Ldoub) Omo[0] - allowCorr * k2/Rphi * DVerr[1]; 
-    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]) + allowCorr * k2/Rphi * DVerr[0];
-    omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
-	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
-	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
-	//Coordinates[2] += (Ldoub) (V[2])/freq;
+    omo[1] = (Ldoub) Omo[1] + allowCorr * k2/Rphi * DVerr[0];
+    omo[2] = Omo[2] + (Ldoub) U;
+	
+	Coordinates[0] += (Ldoub) (V[1])/freq;
+	Coordinates[1] += (Ldoub) (V[0])/freq;
+	Coordinates[2] += (Ldoub) (V[2])/freq;
 
 	
 	//Ldoub EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};

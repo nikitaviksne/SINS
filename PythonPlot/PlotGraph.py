@@ -15,24 +15,32 @@ time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #
 round = 100
 
 '''Линейные скорости'''
-fig1, (fig1_ax1, fig1_ax2) = plt.subplots(1, 2)
+fig1, (fig1_ax1, fig1_ax2, fig1_ax3) = plt.subplots(1, 3)
 # Восточная составляющая
 fig1.suptitle("Скорости")
-fig1_ax1.set_title("Восточная скорость");
+fig1_ax1.set_title("По X");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["Ve"], round), label="Ve");
-fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{Ve}$");
+fig1_ax1.plot(time, np.round(data["Vx"], round), label="Vx");
+fig1_ax1.plot(time, np.round(estimations["Vx"], round), linestyle='--', label="$\hat{Vx}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
-fig1_ax2.set_title("Северная скорость");
+fig1_ax2.set_title("По Y");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["Vn"],round), label="Vn");
-fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{Vn}$");
+fig1_ax2.plot(time, np.round(data["Vy"],round), label="Vy");
+fig1_ax2.plot(time, np.round(estimations["Vy"],round), linestyle='--', label="$\hat{Vy}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
+# Z составляющая
+fig1_ax3.set_title("По Z");
+fig1_ax3.set_xlabel("мин")
+fig1_ax3.set_ylabel("м/с")
+fig1_ax3.plot(time, np.round(data["Vz"],round), label="Vz");
+# fig1_ax1.plot(time, np.round(estimations["Vy"],round), linestyle='--', label="$\hat{Vy}$");
+fig1_ax3.legend(loc="best")
+fig1_ax3.grid(True)
 
 '''Углы ориентации'''
 fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(3, 1)
@@ -116,17 +124,17 @@ exit();
 fig4, (fig4_ax1, fig4_ax2) = plt.subplots(1, 2)
 # Восточное направление
 fig4.suptitle("Ошибка по координатам")
-fig4_ax1.set_title("Восточное направление");
+fig4_ax1.set_title("По X");
 fig4_ax1.set_xlabel("Мин")
 fig4_ax1.set_ylabel("М")
-fig4_ax1.plot(time, np.round(data["d_E"], round), label="dE");
+fig4_ax1.plot(time, np.round(data["d_X"], round), label="dX");
 fig4_ax1.legend(loc="best")
 fig4_ax1.grid(True)
 # Северное направление
-fig4_ax2.set_title("Северное направление");
+fig4_ax2.set_title("По Y");
 fig4_ax2.set_xlabel("Мин")
 fig4_ax2.set_ylabel("М")
-fig4_ax2.plot(time, np.round(data["d_N"],round), label="dN");
+fig4_ax2.plot(time, np.round(data["d_Y"],round), label="dY");
 fig4_ax2.legend(loc="best")
 fig4_ax2.grid(True)
 
