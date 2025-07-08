@@ -95,16 +95,17 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 	return true;
 }
 
-int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
+int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps, Ldoub* CoordGps)
 {
 	Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
 	Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
 	Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
 	Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
-	Ldoub RandomVgps[2] = {0};
+	Ldoub RandomVgps[2] = {0}; // Случайные погрешности скоростей GPS
+	Ldoub RandomCooGPS[2] = {0}; // Случайные погрешности координат GPS
 
-	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &Vgps[0], &Vgps[1], &RandomVgps[0], &RandomVgps[1]);
-	if (res == 22)
+	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &Vgps[0], &Vgps[1], &RandomVgps[0], &RandomVgps[1], &CoordGps[0], &CoordGps[1], &RandomCooGPS[0], &RandomCooGPS[1]);
+	if (res == 26)
 	{
 		//добавление дрейфов к показаниям инерциальных датчиков
 		for (int ii=0; ii<3; ++ii)
@@ -118,6 +119,7 @@ int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, 
 		for(int iii=0; iii<2; ++iii)
 		{
 			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii];
+			CoordGps[iii] += (Ldoub) AllowRandVgps*RandomCooGPS[iii];
 		}
 
 		return res;
@@ -245,6 +247,7 @@ int main(int argc, char *argv[])
 	Ldoub Rlambda;
 	Ldoub Rphi;
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
+	Ldoub lambda0 = (Ldoub) 33*deg2rad;
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
 	Ldoub H0 = (Ldoub) (strtod(argv[1], NULL))*deg2rad;
@@ -255,10 +258,10 @@ int main(int argc, char *argv[])
 	//printf("H0 = %.4f P0 = %.4f R0 = %.4f Vabs = %.4f\n", H0, P0, R0, Vabs);
 
 	Ldoub Vgps[2] = {0};
+	Ldoub CoordGps[2] = {0};
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
-	Ldoub lambda0 = (Ldoub) 33*deg2rad;
 	Ldoub DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
 	Ldoub Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
@@ -314,8 +317,8 @@ int main(int argc, char *argv[])
 
 #if 1
 	FILE* file=fopen(argv[5], "rt");
-	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
-	int res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb,Vgps);
+	//fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
+	int res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps, CoordGps);
 #else
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
 	#define FILE_STREAM
@@ -328,15 +331,15 @@ int main(int argc, char *argv[])
 	const int dim_sense (2); //размер вектора измерения
 	//*/
 	AdaptiveKalman filter(dim_state, dim_sense); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
-	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
+	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения вектора состояния
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
 	H[index_3(dim_state, 0, 0)] = 1;
 	H[index_3(dim_state, 1, 1)] = 1;
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, 4, 4)] = 1e-19;
-	q[index_3(dim_state, 5, 5)] = 1e-19;
+	q[index_3(dim_state, 4, 4)] = 1e-16;
+	q[index_3(dim_state, 5, 5)] = 1e-16;
 	#else // вектор состояния 3
 	H[index_3(dim_state, 0, 0)] = 1;
 	//Матрца ковариации входных шумов (модели)
@@ -353,7 +356,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while(res == 22 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
+	while(res == 26 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
 	{ // цилк while для частоты 100 Гц, поэтому нельзя сделать общее чтение файла для выставки и навигации
 
 		// этап выставки
@@ -363,7 +366,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else
-			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps, CoordGps);
 			#endif
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
 			++cur_time; // для 400 Гц
@@ -434,7 +437,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else //в противном случае, читаем, что есть
-			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps, CoordGps);
 			#endif
 		#if 1
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
@@ -533,15 +536,15 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]); //Voy
 		filter.A[index_3(dim_state, 2, 2)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 3)] = omo[2]; //Phi_oy
-		filter.A[index_3(dim_state, 2, 4)] = (-cos(Orientation[0]));//d_omega_x
-		filter.A[index_3(dim_state, 2, 5)] = (-sin(Orientation[0]));//d_omega_y
+		filter.A[index_3(dim_state, 2, 4)] = -Cbn[index_3(3, 0, 0)];//c11*omega_bx 
+		filter.A[index_3(dim_state, 2, 5)] = -Cbn[index_3(3, 0, 1)];// c12 * omega_by
 		//Phi_oy
 		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]); //Vox
 		filter.A[index_3(dim_state, 3, 1)] = 0; //Voy
 		filter.A[index_3(dim_state, 3, 2)] = - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 3, 4)] = (sin(Orientation[0])); //d_omega_x
-		filter.A[index_3(dim_state, 3, 5)] = (-cos(Orientation[0])); //d_omega_y
+		filter.A[index_3(dim_state, 3, 4)] = -Cbn[index_3(3, 1, 0)]; //d_omega_x
+		filter.A[index_3(dim_state, 3, 5)] = -Cbn[index_3(3, 1, 1)]; //d_omega_y
 		//Delta omega_x
 		filter.A[index_3(dim_state, 4, 0)] = 0; //Vox
 		filter.A[index_3(dim_state, 4, 1)] = 0; //Voy
@@ -636,7 +639,7 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 
-#if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
+#if 1 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
 		{
