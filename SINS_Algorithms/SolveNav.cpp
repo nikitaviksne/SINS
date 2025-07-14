@@ -9,7 +9,7 @@
 #include <stdio.h>
 #endif
 
-void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, Ldoub* ErrVins, bool allowCorr)
+void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub* V0, Ldoub k1, Ldoub* ErrVins, bool allowCorr)
 {
     MulMatrD(Cbn, Wp, Wo, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Wo -- уже не ускорения, а приращение скоростей
 
@@ -43,13 +43,6 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	#endif //dev
 	
 	for (int iii=0; iii < 2; ++iii)	V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
-		
-	//Ошибки по скоростям в м/с и координатам в м
-	for (int iii=0; iii<2; ++iii)
-    {
-		Err_V[iii] = V[iii] - V0[iii];
-        CoordError[iii] += (Err_V[iii]) * h;
-    }
 
 
 	Rlambda = R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
