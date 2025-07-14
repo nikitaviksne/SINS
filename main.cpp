@@ -95,16 +95,17 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 	return true;
 }
 
-int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
+int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, bool AllowRandCoogps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps, Ldoub* CooGps)
 {
 	Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
 	Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
 	Ldoub RandAb[3] = {0}; // Случайные погрешности акселерометров
 	Ldoub RandOmb[3] = {0};// Случайные погрешности гироскопов
-	Ldoub RandomVgps[2] = {0};
+	Ldoub RandomVgps[2] = {0}; //Случайные погрешности по скоростям GPS
+	Ldoub RandomCoogps[2] = {0}; //Случайные погрешности по координатам GPS
 
-	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &Vgps[0], &Vgps[1], &RandomVgps[0], &RandomVgps[1]);
-	if (res == 22)
+	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &Vgps[0], &Vgps[1], &RandomVgps[0], &RandomVgps[1], &CooGps[0], &CooGps[1], &RandomCoogps[0], &RandomCoogps[1]);
+	if (res == 26)
 	{
 		//добавление дрейфов к показаниям инерциальных датчиков
 		for (int ii=0; ii<3; ++ii)
@@ -117,7 +118,8 @@ int Readfile(FILE* is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, 
 		//добавление шума к показаниям СНС
 		for(int iii=0; iii<2; ++iii)
 		{
-			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii];
+			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii]; //Скорости
+			CooGps[iii] += (Ldoub) AllowRandCoogps*RandomCoogps[iii]; //Скорости
 		}
 
 		return res;
@@ -255,6 +257,7 @@ int main(int argc, char *argv[])
 	//printf("H0 = %.4f P0 = %.4f R0 = %.4f Vabs = %.4f\n", H0, P0, R0, Vabs);
 
 	Ldoub Vgps[2] = {0};
+	Ldoub CooGps[2] = {0};
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
@@ -278,7 +281,7 @@ int main(int argc, char *argv[])
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
 	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
-	Ldoub ErrVins[3] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок)
+	Ldoub ErrVins[4] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок) (широта, долгота, Vx, Vy)
 	// массивы для выходных значений
 	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
@@ -293,6 +296,7 @@ int main(int argc, char *argv[])
 	bool AllowRandAcc = (bool) (strtod(argv[8], NULL));
 	bool AllowRandGyr = (bool) (strtod(argv[9], NULL));
 	bool AllowRandVgps = (bool) (strtod(argv[10], NULL));
+	bool AllowRandCoogps = (bool) (strtod(argv[11], NULL));
 	//Создаем квазикоординаты
 	Ldoub alpha[12] = {0}; //малые приращения углов 3 показания на 4 тактах (матрица 3*4)
 	Ldoub w[12] = {0}; // малые приращения скоростей (матрица 3*4)
@@ -315,7 +319,7 @@ int main(int argc, char *argv[])
 #if 1
 	FILE* file=fopen(argv[5], "rt");
 	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
-	int res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb,Vgps);
+	int res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
 #else
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
 	#define FILE_STREAM
@@ -324,19 +328,21 @@ int main(int argc, char *argv[])
 	Ldoub Verr1[2] = {0}; // ошибки интегрирования ускорений
 	Ldoub Verr2[2] = {0}; // ошибки накопления скоростей
 	///*
-	const int dim_state (6); //размер вектора состояния
-	const int dim_sense (2); //размер вектора измерения
+	const int dim_state (6+2); //размер вектора состояния (+ координаты GPS)
+	const int dim_sense (2+2); //размер вектора измерения (+ координаты GPS)
 	//*/
 	AdaptiveKalman filter(dim_state, dim_sense); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
-	H[index_3(dim_state, 0, 0)] = 1;
-	H[index_3(dim_state, 1, 1)] = 1;
+	H[index_3(dim_state, 0, 0)] = 0; //varphi широта
+	H[index_3(dim_state, 1, 1)] = 0; //lambda долгота
+	H[index_3(dim_state, 2, 2)] = 1; //Ve
+	H[index_3(dim_state, 3, 3)] = 1; //Vn
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, 4, 4)] = 1e-19;
-	q[index_3(dim_state, 5, 5)] = 1e-19;
+	q[index_3(dim_state, 6, 6)] = 1e-19;
+	q[index_3(dim_state, 7, 7)] = 1e-19;
 	#else // вектор состояния 3
 	H[index_3(dim_state, 0, 0)] = 1;
 	//Матрца ковариации входных шумов (модели)
@@ -353,7 +359,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while(res == 22 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
+	while(res == 26 ) // Пока возможно чтение из файла. Для бинарного файла -- !in.eof() //условие цикла while для бинарного файла //  Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps) == 22 --- условие цикла While для текстового файла
 	{ // цилк while для частоты 100 Гц, поэтому нельзя сделать общее чтение файла для выставки и навигации
 
 		// этап выставки
@@ -363,7 +369,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else
-			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
 			#endif
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
 			++cur_time; // для 400 Гц
@@ -434,7 +440,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else //в противном случае, читаем, что есть
-			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps);
+			res = Readfile(file, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
 			#endif
 		#if 1
 			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
@@ -514,48 +520,78 @@ int main(int argc, char *argv[])
 	#if 1
 	#if 1 //Модель для вектрора состояния 6
 		//Каждый такт пересчитываем матрицу A у фильтра Калмана
+		//Delta dot varphi (широта)
+		filter.A[index_3(dim_state, 0, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 0, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 0, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 0, 3)] = 1/(R + Coordinates[2]); //Voy
+		filter.A[index_3(dim_state, 0, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 0, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 0, 6)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 0, 7)] = 0; //d_omega_y
+		//Delta dot lambda (долгота)
+		filter.A[index_3(dim_state, 1, 0)] = tan(Coordinates[0])*V[0]/((R + Coordinates[2])*cos(Coordinates[0])); //varphi
+		filter.A[index_3(dim_state, 1, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 1, 2)] = 1/((R + Coordinates[2])*cos(Coordinates[0])); //Vox
+		filter.A[index_3(dim_state, 1, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 1, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 1, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 1, 6)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 1, 7)] = 0; //d_omega_y
 		// Delta dot V_ox
-		filter.A[index_3(dim_state, 0, 0)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Vox
-		filter.A[index_3(dim_state, 0, 1)] = V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + 2*U*sin(Coordinates[0]); //Voy
-		filter.A[index_3(dim_state, 0, 2)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 0, 3)] =  -Ao[2]; //Phi_oy
-		filter.A[index_3(dim_state, 0, 4)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 0, 5)] = 0; //d_omega_y
+		filter.A[index_3(dim_state, 2, 0)] = (V[0]/((R+Coordinates[2])*pow(cos(Coordinates[0]),2)) + 2*U*cos(Coordinates[0]) )*V[1]; //varphi
+		filter.A[index_3(dim_state, 2, 1)] = 0; //lambda 
+		filter.A[index_3(dim_state, 2, 2)] = V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Vox
+		filter.A[index_3(dim_state, 2, 3)] = V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + 2*U*sin(Coordinates[0]); //Voy
+		filter.A[index_3(dim_state, 2, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 2, 5)] = -Ao[2]; //Phi_oy
+		filter.A[index_3(dim_state, 2, 6)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 2, 7)] = 0; //d_omega_y
 		//Delta dot V_oy
-		filter.A[index_3(dim_state, 1, 0)] = -2*(V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0])); //Vox
-		filter.A[index_3(dim_state, 1, 1)] = 0; //Voy
-		filter.A[index_3(dim_state, 1, 2)] = Ao[2]; //Phi_ox
-		filter.A[index_3(dim_state, 1, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 1, 4)] = 0;//d_omega_x
-		filter.A[index_3(dim_state, 1, 5)] = 0;//d_omega_y
+		filter.A[index_3(dim_state, 3, 0)] = -(V[0]/((R+Coordinates[2])*pow(cos(Coordinates[0]),2)) + 2*U*cos(Coordinates[0]) )*V[0]; //varphi
+		filter.A[index_3(dim_state, 3, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 3, 2)] = -2*(V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + U*sin(Coordinates[0])); //Vox
+		filter.A[index_3(dim_state, 3, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 3, 4)] = Ao[2]; //Phi_ox
+		filter.A[index_3(dim_state, 3, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 3, 6)] = 0;//d_omega_x
+		filter.A[index_3(dim_state, 3, 7)] = 0;//d_omega_y
 		//Phi_ox
-		filter.A[index_3(dim_state, 2, 0)] = 0; //Vox
-		filter.A[index_3(dim_state, 2, 1)] = -1/(R+Coordinates[2]); //Voy
-		filter.A[index_3(dim_state, 2, 2)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 2, 3)] = omo[2]; //Phi_oy
-		filter.A[index_3(dim_state, 2, 4)] = (-cos(Orientation[0]));//d_omega_x
-		filter.A[index_3(dim_state, 2, 5)] = (-sin(Orientation[0]));//d_omega_y
+		filter.A[index_3(dim_state, 4, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 4, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 4, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 4, 3)] = -1/(R+Coordinates[2]); //Voy
+		filter.A[index_3(dim_state, 4, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 4, 5)] = omo[2]; //Phi_oy
+		filter.A[index_3(dim_state, 4, 6)] = (-Cbn[index_3(3, 0, 0)]);//d_omega_x
+		filter.A[index_3(dim_state, 4, 7)] = (-Cbn[index_3(3, 0, 1)]);//d_omega_y
 		//Phi_oy
-		filter.A[index_3(dim_state, 3, 0)] = 1/(R+Coordinates[2]); //Vox
-		filter.A[index_3(dim_state, 3, 1)] = 0; //Voy
-		filter.A[index_3(dim_state, 3, 2)] = - omo[2]; //Phi_ox
-		filter.A[index_3(dim_state, 3, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 3, 4)] = (sin(Orientation[0])); //d_omega_x
-		filter.A[index_3(dim_state, 3, 5)] = (-cos(Orientation[0])); //d_omega_y
+		filter.A[index_3(dim_state, 5, 0)] = -U * sin(Coordinates[0]); //varphi
+		filter.A[index_3(dim_state, 5, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 5, 2)] = 1/(R+Coordinates[2]); //Vox
+		filter.A[index_3(dim_state, 5, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 5, 4)] = - omo[2]; //Phi_ox
+		filter.A[index_3(dim_state, 5, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 5, 6)] = (-Cbn[index_3(3, 1, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 5, 7)] = (-Cbn[index_3(3, 1, 1)]); //d_omega_y
 		//Delta omega_x
-		filter.A[index_3(dim_state, 4, 0)] = 0; //Vox
-		filter.A[index_3(dim_state, 4, 1)] = 0; //Voy
-		filter.A[index_3(dim_state, 4, 2)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 4, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 4, 4)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 4, 5)] = 0; //d_omega_y
+		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 6)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_y
 		//Delta omega_y
-		filter.A[index_3(dim_state, 5, 0)] = 0; //Vox
-		filter.A[index_3(dim_state, 5, 1)] = 0; //Voy
-		filter.A[index_3(dim_state, 5, 2)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 5, 3)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 5, 4)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 5, 5)] = 0; //d_omega_y
+		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 7, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 7, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 7, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 7, 6)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_y
 	#else //ветрок состояния 3
 		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
@@ -577,9 +613,12 @@ int main(int argc, char *argv[])
 		{
 			for (int iii =0; iii < filter.getDimX()*filter.getDimX(); ++iii) //вычисляю матрицу перехода Phi
 				filter.Phi[iii] = filter.I[iii] + filter.A[iii] * h; //не забываем умножить на такт интегрирования
-
-			for (int iii=0; iii<filter.getDimZ(); ++iii)
-				ErrVins[iii] = V[iii] - Vgps[iii]; //разница ошибок ИНС и СНС
+			
+			for (int iii=0; iii<2; ++iii)
+				ErrVins[iii] = Coordinates[iii] - CooGps[iii]; //разница ошибок координат ИНС и СНС
+			
+			for (int iii=2; iii<filter.getDimZ(); ++iii)
+				ErrVins[iii] = V[iii] - Vgps[iii]; //разница ошибок скоростей ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
@@ -696,7 +735,9 @@ int main(int argc, char *argv[])
 		{
 			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
 			// Шапка
-		#if 1 //Для вектора состояния размерности 6
+		#if 1 //Для вектора состояния размерности 8
+			fprintf(estimations, "varphi,");
+			fprintf(estimations, "lambda,");
 			fprintf(estimations, "Ve,");
 			fprintf(estimations, "Vn,");
 			fprintf(estimations, "Phi_e,");
