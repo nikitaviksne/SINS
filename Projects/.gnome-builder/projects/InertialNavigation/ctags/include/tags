@@ -1,0 +1,3 @@
+MATRIXH	matrix.h	/^#define MATRIXH$/;"	d
+STDH	std.h	/^#define 	STDH$/;"	d
+index	std.h	/^#define index(/;"	d

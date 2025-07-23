@@ -1,0 +1,7 @@
+STDH	std.h	/^#define 	STDH$/;"	d
+index	std.h	/^#define index(/;"	d
+main	main.cpp	/^int main()$/;"	f	typeref:typename:int
+ame:void
+STDH	std.h	/^#define 	STDH$/;"	d
+index	std.h	/^#define index(/;"	d
+main	main.cpp	/^int main()$/;"	f	typeref:typename:int
