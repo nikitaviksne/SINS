@@ -14,10 +14,11 @@
 #define _USE_MATH_DEFINES
 #include <stdlib.h>
 
-#define dev
+//#define dev
 
 #ifdef dev
 #include <stdio.h>
+#include <iostream>
 #endif
 
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
@@ -343,8 +344,8 @@ int main(int argc, char *argv[])
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, 6, 6)] = 1e-19;
-	q[index_3(dim_state, 7, 7)] = 1e-19;
+	q[index_3(dim_state, 6, 6)] = 1e-17 * pow(h, 2); //* pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
+	q[index_3(dim_state, 7, 7)] = 1e-17 * pow(h, 2);
 	#else // вектор состояния 3
 	H[index_3(dim_state, 0, 0)] = 1;
 	//Матрца ковариации входных шумов (модели)
@@ -418,7 +419,7 @@ int main(int argc, char *argv[])
 #if 0
 				//начальные значения ошибок ориентации (для вектора состояния)
 				x0[2] = -1e-4/g;
-				x0[3] = 1e-4/g;
+				x0[3] = 1e-4/g;k_iter
 #endif
 
 			}
@@ -624,6 +625,26 @@ int main(int argc, char *argv[])
 				ErrVins[iii] = V[iii-2] - Vgps[iii-2]; //разница ошибок скоростей ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
+			#ifdef dev //сравнение результатов вычисления всех атрибутов ФК с программой на Python
+
+			printf("x_1 = ");
+			filter.Print2dMatr(filter.x_1, filter.getDimX(), 1);
+			printf("Papr = ");
+			filter.Print2dMatr(filter.Papr, filter.getDimX(), filter.getDimX());
+			printf("v = ");
+			filter.Print2dMatr(filter.v, filter.getDimZ(), 1);
+			printf("C = ");
+			filter.Print2dMatr(filter.C, filter.getDimZ(), filter.getDimZ());
+			printf("R = ");
+			filter.Print2dMatr(filter.R, filter.getDimZ(), filter.getDimZ());
+			printf("K = ");
+			filter.Print2dMatr(filter.K, filter.getDimX(), filter.getDimZ());
+			printf("x = ");
+			filter.Print2dMatr(filter.x, filter.getDimX(), 1);
+			printf("Papst = ");
+			filter.Print2dMatr(filter.Papst, filter.getDimX(), filter.getDimX());	
+			printf("Kiter = %d", filter.iter);
+			#endif
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
 
 		#if 0
@@ -678,7 +699,7 @@ int main(int argc, char *argv[])
 #endif
 		fflush(navig_res);
 
-#if 0 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
+#if 1 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
 		static FILE* for_Kalman;
 		if(!for_Kalman)
 		{
@@ -699,7 +720,10 @@ int main(int argc, char *argv[])
 			fprintf(for_Kalman, "latitude,");
 			fprintf(for_Kalman, "longitude,");
 			fprintf(for_Kalman, "Ve_gps,");
-			fprintf(for_Kalman, "Vn_gps");
+			fprintf(for_Kalman, "Vn_gps,");
+			for (int iii=0; iii<3; ++iii)
+				for (int jjj=0; jjj<3; ++jjj)
+					fprintf(for_Kalman, "C%d%d,",iii,jjj); //Элементы матрицы перехода из связанной в опорную
 			fprintf(for_Kalman, "\n");
 		}
 
@@ -725,7 +749,11 @@ int main(int argc, char *argv[])
 			//Скорости от GPS
 			for (int iii=0; iii<2; ++iii)
 				fprintf(for_Kalman, "%.10e,", Vgps[iii]);
-
+				
+			for (int iii=0; iii<3; ++iii)
+				for (int jjj=0; jjj<3; ++jjj)
+					fprintf(for_Kalman, "%.10e,", Cbn[index_3(3, iii, jjj)]); //Элементы матрицы перехода из связанной в опорную
+			
 			fprintf(for_Kalman, "\n");
 		}
 		fflush(for_Kalman);
@@ -774,6 +802,9 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "\n");
 		}
 		fflush(estimations);
+#endif
+#ifdef dev
+	std::cin.get();
 #endif
 	} //чтение из файла while( !in.eof())
 	return 0;

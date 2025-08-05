@@ -91,6 +91,7 @@ fig3.suptitle("Оценка скоростей дрейфов гироскопо
 fig3_ax1.set_title("Оценка скоростей дрейфа гироскопа канала X")
 fig3_ax1.set_xlabel("Мин")
 fig3_ax1.set_ylabel("Град/час")
+fig3_ax1.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель")
 fig3_ax1.plot(time, np.round(np.rad2deg(estimations["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
@@ -101,6 +102,7 @@ fig3_ax1.legend(loc="best")
 fig3_ax2.set_title("Оценка скоростей дрейфа гироскопа канала Y")
 fig3_ax2.set_xlabel("Мин")
 fig3_ax2.set_ylabel("Град/час")
+fig3_ax2.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель")
 fig3_ax2.plot(time, np.round(np.rad2deg(estimations["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
