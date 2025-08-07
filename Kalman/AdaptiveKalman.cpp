@@ -286,7 +286,7 @@ void AdaptiveKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Ð
 {
 	for (int iii=0; iii<dim1; ++iii)
 	{
-		for (int jjj=0; jjj<dim2; ++jjj) printf("%e ", A[index_3(dim2, iii, jjj)]);
+		for (int jjj=0; jjj<dim2; ++jjj) printf("%10.10f ", A[index_3(dim2, iii, jjj)]);
 		printf("\n");
 	}
 }

@@ -5,7 +5,6 @@ project("Inertial_algorithm" LANGUAGES CXX)
 set(SRCS
     mathematics.cpp
     matrix.cpp
-	quaternions.cpp
     )
 
 set(SOURCE_LIB
