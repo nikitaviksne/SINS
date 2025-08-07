@@ -9,8 +9,15 @@ set(SRCS
     )
 
 set(SOURCE_LIB
+<<<<<<< Updated upstream
     include/
 	/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/
+=======
+    ../include/std.h
+    ../include/matrix.h
+    ../include/mathematics.h
+    /home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/
+>>>>>>> Stashed changes
     )
 
 add_library(lclib STATIC ${SRCS})
@@ -91,6 +98,7 @@ target_include_directories(kalman PUBLIC ${Headers_Kalman})
 #find_package(Qt5Widgets REQUIRED) #Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
 add_executable(main main.cpp)
+<<<<<<< Updated upstream
 
 #qt5_use_modules(main Core) ##Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
@@ -100,3 +108,6 @@ target_link_libraries(main
 	kalman 
 	alglib
 )
+=======
+target_link_libraries(main lclib "/home/nikita_viksne/InertialNavigation/libkalman.a" "/home/nikita_viksne/InertialNavigation/libalglib.a")
+>>>>>>> Stashed changes

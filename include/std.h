@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 /*Файл с define*/
 #ifndef STDH
 #define STDH
@@ -7,3 +8,12 @@
 #define Ldoub double
 
 #endif
+=======
+#ifndef STD_H
+#define STD_H
+
+#define Ldoub double
+
+#define index(columns, iRow, jCol) columns*iRow + jCol 
+#endif
+>>>>>>> Stashed changes
