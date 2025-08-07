@@ -42,6 +42,7 @@ fig2_ax1.set_title("Угол курса");
 fig2_ax1.set_xlabel("мин")
 fig2_ax1.set_ylabel("Град.")
 fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"]),round), label="Курс");
+fig2_ax1.plot(time, np.round(np.rad2deg(estimations["d_Psi"]),round), label="$\hat{\Delta\Psi}$");
 fig2_ax1.legend(loc="best")
 fig2_ax1.grid(True)
 # Угол крена
@@ -49,7 +50,7 @@ fig2_ax2.set_title("Угол крена");
 fig2_ax2.set_xlabel("Мин")
 fig2_ax2.set_ylabel("Угл. мин")
 fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="$\gamma$");
-fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\gamma}$");
+fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\Delta\gamma}$");
 fig2_ax2.legend(loc="best")
 fig2_ax2.grid(True)
 # Угол тангажа
@@ -57,7 +58,7 @@ fig2_ax3.set_title("Угол тангажа");
 fig2_ax3.set_xlabel("Мин")
 fig2_ax3.set_ylabel("Угл. мин")
 fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="$\\theta$");
-fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\\theta}$");
+fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\Delta\\theta}$");
 fig2_ax3.legend(loc="best")
 fig2_ax3.grid(True)
 
@@ -91,7 +92,11 @@ fig3.suptitle("Оценка скоростей дрейфов гироскопо
 fig3_ax1.set_title("Оценка скоростей дрейфа гироскопа канала X")
 fig3_ax1.set_xlabel("Мин")
 fig3_ax1.set_ylabel("Град/час")
-fig3_ax1.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель")
+fig3_ax1.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель, body")
+fig3_ax1.axhline(y = 0.05*np.cos(np.deg2rad(50)) + 0.05*np.sin(np.deg2rad(50)), xmin=0, color = "#db0db9", linestyle = "-.", label = "Модель, psi = 50$\circ$")
+fig3_ax1.axhline(y = -0.05*np.sin(np.deg2rad(50)) + 0.05*np.cos(np.deg2rad(50)), xmin=0, color = "#db0db9",  linestyle = "-.", label = "Модель, psi = 50$\circ$")
+fig3_ax1.axhline(y = 0.05*np.cos(np.deg2rad(50+90)) + 0.05*np.sin(np.deg2rad(50+90)), xmin=0, color = "#0ddb60", linestyle = "--", label = "Модель, psi = 140$\circ$")
+fig3_ax1.axhline(y = -0.05*np.sin(np.deg2rad(50+90)) + 0.05*np.cos(np.deg2rad(50+90)), xmin=0, color = "#0ddb60",  linestyle = "--", label = "Модель, psi = 140$\circ$")
 fig3_ax1.plot(time, np.round(np.rad2deg(estimations["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
@@ -102,13 +107,35 @@ fig3_ax1.legend(loc="best")
 fig3_ax2.set_title("Оценка скоростей дрейфа гироскопа канала Y")
 fig3_ax2.set_xlabel("Мин")
 fig3_ax2.set_ylabel("Град/час")
-fig3_ax2.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель")
+fig3_ax2.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель, body")
+fig3_ax2.axhline(y = 0.05*np.cos(np.deg2rad(50)) + 0.05*np.sin(np.deg2rad(50)), xmin=0, color = "#db0db9", linestyle = "-.", label = "Модель, psi = 50$\circ$")
+fig3_ax2.axhline(y = -0.05*np.sin(np.deg2rad(50)) + 0.05*np.cos(np.deg2rad(50)), xmin=0, color = "#db0db9",  linestyle = "-.", label = "Модель, psi = 50$\circ$")
+fig3_ax2.axhline(y = 0.05*np.cos(np.deg2rad(50+90)) + 0.05*np.sin(np.deg2rad(50+90)), xmin=0, color = "#0ddb60", linestyle = "--", label = "Модель, psi = 140$\circ$")
+fig3_ax2.axhline(y = -0.05*np.sin(np.deg2rad(50+90)) + 0.05*np.cos(np.deg2rad(50+90)), xmin=0, color = "#0ddb60",  linestyle = "--", label = "Модель, psi = 140$\circ$")
 fig3_ax2.plot(time, np.round(np.rad2deg(estimations["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
 fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y}^{F\\alpha}$");
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
+
+
+'''Оценки ориентации'''
+fig10, (fig10_ax1, fig10_ax2) = plt.subplots(2, 1)
+# Угол Phi_x
+fig10_ax1.set_title("Оценка угла $\Phi_x$");
+fig10_ax1.set_xlabel("Мин")
+fig10_ax1.set_ylabel("Угл. мин")
+fig10_ax1.plot(time, np.round(np.rad2deg(estimations["Phi_e"])*60,round), label="$\hat{\Phi_e}$");
+fig10_ax1.legend(loc="best")
+fig10_ax1.grid(True)
+# Угол phi_y
+fig10_ax2.set_title("Оценка угла $\Phi_n$");
+fig10_ax2.set_xlabel("Мин")
+fig10_ax2.set_ylabel("Угл. мин")
+fig10_ax2.plot(time, np.round(np.rad2deg(estimations["Phi_n"])*60,round), label="$\hat{\Phi_n}$");
+fig10_ax2.legend(loc="best")
+fig10_ax2.grid(True)
 
 plt.show()
 

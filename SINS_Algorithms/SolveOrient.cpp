@@ -150,7 +150,7 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 			else Cbn[index_3(3, iii,jjj)] = 0;
 #endif
 
-#if 1 // коррекция матрицы перехода
+#if 0 // коррекция матрицы перехода
 	Normalization(Cbn, sw);
 	Ortogonalization(Cbn, sw);
 	sw = !sw; //меняем направление нормализации/ортогонализации

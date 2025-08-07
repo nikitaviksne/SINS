@@ -11,7 +11,7 @@ quaternion::quaternion(Ldoub a, Ldoub b, Ldoub c, Ldoub d)
 	this->z = d;
 }
 
-quaternion& operator / (const Ldoub& val);  //перегрузка оператора деления на число
+quaternion& quaternion::operator / (const Ldoub& val)  //перегрузка оператора деления на число
 {
 	this->w /= val;
 	this->x /= val;
@@ -20,7 +20,7 @@ quaternion& operator / (const Ldoub& val);  //перегрузка операт�
 	return *this;
 }			
 
-quaternion operator * (const Ldoub& val ) //перегрузка оператора умножения на число
+quaternion quaternion::operator * (const Ldoub& val ) //перегрузка оператора умножения на число
 {
 	this->w *= val;
 	this->x *= val;
@@ -29,7 +29,7 @@ quaternion operator * (const Ldoub& val ) //перегрузка операто�
 	return *this;
 }
 
-quaternion operator * (const quaternion& quat ) const //перегрузка оператора умножения кватернионов
+quaternion quaternion::operator * (const quaternion& quat ) const //перегрузка оператора умножения кватернионов
 {
 	Ldoub w, x, y, z;
 	w = this->w * quat.w - this->x * quat.x - this->y * quat.y - this->z * quat.z;
@@ -39,7 +39,7 @@ quaternion operator * (const quaternion& quat ) const //перегрузка о�
 	return quaternion(w,x,y,z);
 }
 
-quaternion operator = (const quaternion& quat) //перегрузка оператора присваивания
+quaternion quaternion::operator = (const quaternion& quat) //перегрузка оператора присваивания
 {
 	this->w = quat.w;
 	this->x = quat.x;
