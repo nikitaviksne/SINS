@@ -55,18 +55,18 @@ lmbda0 = np.deg2rad(33)
 time_to_turn = 5*60 # время в сек на разворот
 time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота в тактах (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
 time_stop_turn = (t_nav + time_to_alignment)//2 + time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) окончания поворота 
-angle_turn = np.deg2rad(90) # угол разворота, в рад
+angle_turn = np.deg2rad(0) # угол разворота, в рад
 om_turn = - angle_turn / (time_to_turn ) #угловая скорость поворота в проекции на местную вертикаль (положительное мзменение курса по часовой, следовательно угловая скрость отрицательная), рад/с
 
 '''тип файлы, бинарный или текстовый'''
 extention_out_file = "csv" # bin (для бинарного) или csv (для текстового)
 
 '''задаем ориентацию объекта'''
-heading0 = np.deg2rad(50)
+heading0 = np.deg2rad(90)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
-file_name = f"data_acc_veloc_{Vabs}_heading0_{int(np.rad2deg(heading0))}_freq_400_turn_V_coo_gps.{extention_out_file}"
+file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_freq_400_turn_V_coo_gps.{extention_out_file}"
 C_n_b = matrix_o_b(heading0, roll, pitch)
 
 '''Систематические дрейфы'''
@@ -209,12 +209,3 @@ with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", typ
                 
         
 print("Generation done")
-
-fig1, (fig1_ax1, fig1_ax2) = plt.subplots(2, 1)
-fig1_ax1.plot(Ve)
-fig1_ax2.plot(Vn)
-
-fig10, (fig10_ax1) = plt.subplots(1, 1)
-fig10_ax1.plot(np.rad2deg(heading))
-
-plt.show()

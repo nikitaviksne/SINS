@@ -10,7 +10,7 @@ time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #
 
 round = 100
 
-'''Оценки Линейные скорости'''
+'''Оценки ошибок линейный скоростей'''
 fig1, (fig1_ax1, fig1_ax2) = plt.subplots(1, 2)
 # Восточная составляющая
 fig1.suptitle("Оценки скоростей")

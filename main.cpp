@@ -649,6 +649,8 @@ int main(int argc, char *argv[])
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
+			fprintf(navig_res, "errVe;");
+			fprintf(navig_res, "errVn;");
 			fprintf(navig_res, "Phi;");
 			fprintf(navig_res, "Lambda;");
 			fprintf(navig_res, "Height;");
@@ -668,6 +670,9 @@ int main(int argc, char *argv[])
 			// Скорости
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", V[i]);
+			//Ошибки по скорости
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", Err_V[i]);
 			// Координаты
 			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", Coordinates[i]);

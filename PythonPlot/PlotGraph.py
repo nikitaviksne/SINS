@@ -14,22 +14,22 @@ time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #
 
 round = 100
 
-'''Линейные скорости'''
+'''Ошибки линейный скоростей'''
 fig1, (fig1_ax1, fig1_ax2) = plt.subplots(1, 2)
 # Восточная составляющая
-fig1.suptitle("Скорости")
-fig1_ax1.set_title("Восточная скорость");
+fig1.suptitle("Ошибки скоростей")
+fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["Ve"], round), label="Ve");
+fig1_ax1.plot(time, np.round(data["errVe"], round), label="Ve");
 fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
-fig1_ax2.set_title("Северная скорость");
+fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["Vn"],round), label="Vn");
+fig1_ax2.plot(time, np.round(data["errVn"],round), label="Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)

@@ -6,7 +6,7 @@
 #build/debug/main 50 0 0 30 /home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc_veloc_30_heading_50_freq_400_gps.bin
 #build/debug/main 90 0 0 30 /home/nikita_viksne/Документы/Python/Modelling_sensetive_elements/Data_files/data_acc_veloc_30_heading_90_freq_400_gps.bin
 # Поворот
-build/debug/main 50 0 0 0 /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/Modelling_sensetive_elements/Data_files/data_acc_veloc_0_heading_50_freq_400_gps_turn.csv 1 1 1 1 1 1
+build/main 90 0 0 30 /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/Data_files/data_acc_veloc_30_heading_90_freq_400_turn_V_coo_gps.csv 1 1 1 1 1 1
 
 #Реальные сырые данные
 # build/debug/main 50 0 0 0 /home/nikita_viksne/Документы/C_Cpp_progs/InertialNavigation/Data_files/TERM20250616144529640.log 1 1 1 1 1 
