@@ -329,7 +329,7 @@ int main(int argc, char *argv[])
 	Ldoub Verr2[2] = {0.}; // ошибки накопления скоростей
 	///*
 	const int dim_state (7+2); //размер вектора состояния (+ координаты GPS)
-	const int dim_sense (0+2); //размер вектора измерения (+ координаты GPS)
+	const int dim_sense (2+2); //размер вектора измерения (+ координаты GPS)
 	//*/
 	AdaptiveKalman filter(dim_state, dim_sense); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
@@ -337,8 +337,8 @@ int main(int argc, char *argv[])
 	#if 1 // вектор состояния 6
 	H[index_3(dim_state, 0, 0)] = 1.; //varphi широта
 	H[index_3(dim_state, 1, 1)] = 1.; //lambda долгота
-	// H[index_3(dim_state, 2, 2)] = 1.; //Ve
-	// H[index_3(dim_state, 3, 3)] = 1.; //Vn
+	H[index_3(dim_state, 2, 2)] = 1.; //Ve
+	H[index_3(dim_state, 3, 3)] = 1.; //Vn
 	print2dMatr(H, dim_sense, dim_state);
 
 	//Матрца ковариации входных шумов (модели)
@@ -351,26 +351,8 @@ int main(int argc, char *argv[])
 	Ldoub q[dim_state*dim_state] = {0};
 	q[index_3(dim_state, 0, 0)] = 1e-19;
 	#endif
-	Ldoub r[dim_sense*dim_sense] = {0};
-	r[index_3(dim_sense, 0, 0)] = 0.2/R*sqrt(freq);
-	r[index_3(dim_sense, 0, 1)] = 0;
-	r[index_3(dim_sense, 0, 2)] = 0;
-	r[index_3(dim_sense, 0, 3)] = 0;
-	//
-	r[index_3(dim_sense, 1, 0)] = 0;
-	r[index_3(dim_sense, 1, 1)] = 0.2/R*sqrt(freq);
-	r[index_3(dim_sense, 1, 2)] = 0;
-	r[index_3(dim_sense, 1, 3)] = 0;
-	//
-	r[index_3(dim_sense, 2, 0)] = 0;
-	r[index_3(dim_sense, 2, 1)] = 0;
-	r[index_3(dim_sense, 2, 2)] = 0.05*sqrt(freq);
-	r[index_3(dim_sense, 2, 3)] = 0;
-	//
-	r[index_3(dim_sense, 3, 0)] = 0;
-	r[index_3(dim_sense, 3, 1)] = 0;
-	r[index_3(dim_sense, 3, 2)] = 0;
-	r[index_3(dim_sense, 3, 3)] = 0.05*sqrt(freq);
+	// Ldoub r[dim_sense*dim_sense] = {0.05, 0, 0, 0.05};
+
 #if 0
 	//Для лучшей обусловленности матрицы HPH_t увеличиваю начальные значения априорной ошибки
 	for (int iii=0; iii<filter.getDimX()*filter.getDimX(); ++iii)
@@ -646,8 +628,8 @@ int main(int argc, char *argv[])
 			for (int iii=0; iii<2; ++iii)
 				ErrVins[iii] = Coordinates[iii] - CooGps[iii]; //разница ошибок координат ИНС и СНС
 		#endif
-			// for (int iii=2; iii<filter.getDimZ(); ++iii)
-			// 	ErrVins[iii] = V[iii-2] - Vgps[iii-2]; //разница ошибок скоростей ИНС и СНС
+			for (int iii=2; iii<filter.getDimZ(); ++iii)
+				ErrVins[iii] = V[iii-2] - Vgps[iii-2]; //разница ошибок скоростей ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
