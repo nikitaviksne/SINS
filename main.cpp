@@ -36,6 +36,83 @@ void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 
 bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
 {//Чтение файла с помощью fstream
+#include <fstream> //файловые потоки для чтения бинарного файла
+
+int main()
+{
+	//инициализация необходимых переменных и констант
+	const double g = 9.81;
+	const double a = 6378245;
+	const double b = 6356856;
+	const double e=sqrt(1 - b*b/a/a);
+	const double R=6400e3;
+	const double pi=3.141592653589793;
+	const double U = 7.27220521664304e-05;
+	const double rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
+	const double deg2rad = 1./rad2deg;
+
+	int freq = 100; // частота измерений с инерциальных датчиков
+	double h = 0.01; //период дискретизации
+	int t_nav = 8*60; // время работы нав алгоритма в секундах
+	int t_alignment = 5*60*freq; // время выставки в тактах
+
+	int cur_time = 0; // текущий такт!! измерения
+	/*
+	 * Начальные значения.
+	 *Чтобы расчитать начальные значения скоростей, с которых проводить интегрирование
+	*/
+	// Для моделирования показаний Ч.Э.
+	double H0 = (double) (50)*deg2rad;
+	double P0 = (double) (0)*deg2rad;
+	double R0 = (double) (0)*deg2rad;
+	double Vabs = 300;
+	double Cnb[9];
+	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
+	//Необходимое для выставки
+	double phi0 = (double) 55*deg2rad;
+	double lambda0 = (double) 33*deg2rad;
+	double DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
+	double Heading = 0, Roll = 0, Pitch = 0;
+	bool AlignmentContinue = true; // для начала выставки
+	// Необходимые массивы для решение навигационной задачи
+	double Ab[3] = {0}; // Ускорения в связанных осях
+	double BiasAb[3] = {0}; //Смещение нулей акселерометров
+	double BiasOmb[3] = {0}; //Смещение нулей гироскопов
+	double RandAb[3] = {0}; //Случайные погрешности акселерометров
+	double RandOmb[3] = {0}; //Случайные погрешности гироскопов
+	double Ao[3] = {0}; // Ускорения в географических осях
+	double Omb[3] = {0}; // Угловые скорости в связанных осях
+	double Omo[3] = {0}; // Угловые скорости в географических осях
+	//double Oms[3] = {0}; // угловые скорости от линейного движения + Земля
+	double MeanAb[3] = {0};
+	double MeanOmb[3] = {0};
+	double StdAb[3] = {0};
+	double StdOmb[3] = {0};
+	double Cbn[9] = {0};
+	// массивы для выходных значений
+	double V[3] = {(double) Vabs*sin(H0), (double) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
+	double Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
+	double Orientation[3] = {0}; // Углы ориентации
+	double CoordErr[2] = {0}; // Ошибки по координатам в метрах
+	double Rlambda;
+
+	double sqrEErr {0}; //Ошибка возведения e в квадрат 
+	double E2E {0};
+	TwoProduct(e, e, E2E, sqrEErr);
+	TwoSum(E2E, sqrEErr, E2E, sqrEErr, false);
+	Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	double Rphi;
+	Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+
+	bool AllowBiasAcc = true;
+	bool AllowBiasGyr = false;
+	bool AllowRandAcc = false;
+	bool AllowRandGyr = false;
+
+	double resultV[2] = {0};
+	double Verr1[2] = {0}; // ошибки интегрирования ускорений
+	double Verr2[2] = {0}; // ошибки накопления скоростей
+
 	// Чтение из файла ускорений и угловых скоростей
 	if (is.read((char *) &Ab[0], sizeof(double))) //пока считывается первое измерение (ускорение по оси Xb)
 	{
@@ -112,6 +189,36 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
 		}
+
+#if 0
+		printf("считанное ускорение (2й элемент): %.20f\n", Ab[2]);
+		printf("считанный случ дрейф ДУС (последний элемент): %.20f", RandOmb[2]);
+		std::getc(stdin);
+
+
+		/*Генерирование (моделирование) показаний ч.э*/
+		if (cur_time <= t_alignment)
+		{
+			Ao[0] = 0.0; Ao[1] = 0.0; Ao[2] = g;
+			Omo[0] = 0;
+			Omo[1] = (double) U*cos(phi0);
+			Omo[2] = (double) U*sin(phi0);
+		}
+		else
+		{
+			Omo[0] = (double) -Vabs*cos(H0) / (Rphi + 0); //Rphi
+			Omo[1] = (double) Vabs*sin(H0) / ((Rlambda + 0)) + (double) U*cos(phi0); // Rlambda
+			Omo[2] = (double) Vabs*sin(H0) * tan(phi0) / (Rlambda + 0) + (double) U*sin(phi0);// Rlambda
+			Ao[0] = 0.0;//(double) ( Omo[1]*0 -(double) Omo[2]*Vabs*cos(H0) + (double) U*cos(phi0)*0 - (double) U*sin(phi0)*Vabs*cos(H0));
+			Ao[1] = 0.0;//(double) (-Omo[0]*0 +(double) Omo[2]*Vabs*sin(H0) + (double) U*sin(phi0)*Vabs*sin(H0));
+			Ao[2] = g;
+			phi0 += (double) Vabs*cos(H0)/(Rphi + 0) * h;
+		}
+		//printf("Cur_time = %d\n", cur_time);
+		//printf("Modelled Ao = [%.20f; %.20f; %.20f]\n", Ao[0], Ao[1], Ao[2]);
+		MulMatrD(Cnb, Ao, Ab,3,3,1); // проекция ускорений на связанные оси
+		//printf("Modelled Ab = [%.20e; %.20e; %.20e]\n", Ab[0], Ab[1], Ab[2]);
+		MulMatrD(Cnb, Omo, Omb,3,3,1); // проекция угловых скоростей на связанные оси
 		Omb[0] += AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0];
 		Omb[1] += AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1];
 		Omb[2] += 0*AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2];
@@ -386,6 +493,7 @@ int main(int argc, char *argv[])
 		{
 			if (AlignmentContinue)
 			{
+				double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
 				printf("Mean Omb not in Mean\n");
 				print2dMatr(MeanOmb, 1, 3);
 				Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
@@ -426,6 +534,96 @@ int main(int argc, char *argv[])
 
 		}
 #if 1
+		Omo[0] = (double) -V[1]/(Rphi + Coordinates[2]);// Rphi
+		Omo[1] = (double) V[0]/(Rlambda + Coordinates[2]);// Rlambda
+		Omo[2] = (double) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]);// Rlambda
+		double omo[3] = {(double) Omo[0], (double) Omo[1] + (double) U*cos(Coordinates[0]), (double) Omo[2] + (double) U*sin(Coordinates[0])}; // абсолютные угловые скорости
+		Coordinates[0] += (double) (V[1]/(Rphi + Coordinates[2])) * h; // Rphi
+		Coordinates[1] += (double) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0]))) * h; // Rlambda
+		Coordinates[2] += ((double) V[2]) * h;
+		// Решение уравнения Пуассона
+		double EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
+		double EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
+		double CEigWb[9]; // первое слагаемое уравнения Пуассона
+		double EigWoC[9]; // второе слагаемое уравнения Пуассона
+ 		MulMatrD(Cbn, EigWb, CEigWb,3,3,3);
+		MulMatrD(EigWo, Cbn, EigWoC,3,3,3);
+
+		for(int i=0; i<9; ++i)
+			Cbn[i] += (CEigWb[i] - EigWoC[i]) * h;
+		// вычисление углов ориентации через МНК (как в выставке)
+		Orientation[0] = (double) atan2(Cbn[index(3, 0, 1)], Cbn[index(3, 1, 1)]);
+		Orientation[1] = (double) - atan2(Cbn[index(3, 2, 0)], Cbn[index(3, 2, 2)]);
+		double c0 = (double) sqrt(Cbn[index(3, 2, 0)]* Cbn[index(3, 2, 0)] + Cbn[index(3, 2, 2)]*Cbn[index(3, 2, 2)]);
+		Orientation[2] = (double) atan2(Cbn[index(3, 2, 1)], c0);
+
+		// решение задачи навигации
+		MulMatrD(Cbn, Ab, Ao,3,3,1); // перепроектирование из связаных осей в навигационные
+		//V[2] += (Ao[2] + (Omo[1] + U*cos(Coordinates[0]))*V[0] + V[1]*Omo[0] - g*(1-2*Coordinates[2]/Rphi)) * h; //Vup
+#if 1
+		//Кориолисовы добавки
+		double aCoriolis[3] = {0};
+		aCoriolis[0] =(double) ((double) omo[1]*V[2] - (double) omo[2]*V[1] + (double) U*cos(Coordinates[0])*V[2] - (double) U*sin(Coordinates[0])*V[1]);
+		aCoriolis[1] =(double) ((double) -omo[0]*V[2] + (double) omo[2]*V[0] + (double) U*sin(Coordinates[0])*V[0]);
+		aCoriolis[2] =(double) ((double) omo[0]*V[1] - (double) omo[1]*V[0] - (double) U*cos(Coordinates[0])*V[0]);
+
+		double V_dot[2] = {(double) Ao[0], (double) Ao[1] };
+
+		/*
+		V[0] += (double) (Ao[0] - aCoriolis[0]) * h;// Ve
+		V[1] += (double) (Ao[1] - aCoriolis[1]) * h; //Vn
+		//*/
+
+
+		///*
+		// умножение
+		TwoProduct(Ao[0] - aCoriolis[0], h, V_dot[0], Verr2[0]);
+		TwoProduct(Ao[1] - aCoriolis[1], h, V_dot[1], Verr2[1]);
+		// компенсация ошибок интегрирования ускорений
+		TwoSum(Verr2[0], V_dot[0], V_dot[0], Verr2[0], false);
+		TwoSum(Verr2[1], V_dot[1], V_dot[1], Verr2[1], false);
+		// сложение скоростей с предыдущего такта и только что проинтегрированных ускорений (приращения скоростей). Оценка погрешности этого сложения
+		TwoSum(V_dot[0], V[0], V[0], Verr1[0], false);
+		TwoSum(V_dot[1], V[1],  V[1], Verr1[1], false);
+		//Компенсация погрешности сложения скоростей с пред. такта и приращения скоростей на тек. такте
+		TwoSum(Verr1[0], V[0], V[0], Verr1[0], false);
+		TwoSum(Verr1[1], V[1],  V[1], Verr1[1], false);
+		//*/
+		CoordErr[0] +=(V[0] - (double) Vabs*sin(H0)) * h;
+		CoordErr[1] +=(V[1] - (double) Vabs*cos(H0)) * h;
+
+		/*printf("пересчитанное ускорение (0й элемент): %.20f\n", Ao[0]);
+		printf("Рассчитанное ускорение кориолиса: %.20f", aCoriolis[0]);
+		std::getc(stdin);*/
+#endif
+#if 1 // Пересчет радиусов сильно влияет на ошибки
+#if 0
+		double sqrSinErr {0}; //Ошибка возведения синуса в квадрат 
+		double sin2sin {0};
+
+		TwoProduct(sin(Coordinates[0]), sin(Coordinates[0]), sin2sin, sqrSinErr); 
+		TwoSum(sin2sin, sqrSinErr, sin2sin, sqrSinErr, false); //sin*sin
+		
+		double e2Sin {0}; // e*e*sin*sin
+		double e2SinErr {0};
+		TwoProduct(E2E, sin2sin, e2Sin, e2SinErr); //// e*e*sin*sin
+		TwoSum(e2Sin, e2SinErr, e2Sin, e2SinErr, false); //e*e*sin*sin
+
+		e2SinErr = 0;
+		double oneE2Sin {0}; // 1 - e*e*sin*sin
+		TwoSum(1., -e2SinErr, oneE2Sin, e2SinErr, false);
+		TwoSum(oneE2Sin, e2SinErr, oneE2Sin, e2SinErr, false);
+		
+		Rlambda = (double) R/sqrt(oneE2Sin);
+		Rphi = (double) R*(1 - e*e)/(sqrt(oneE2Sin) * (oneE2Sin));
+#endif
+
+#if 1
+		Rphi = (double) R*(1 - e*e)/(sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+		Rlambda = (double) R/sqrt(1-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+#endif
+#endif
+
 		Ldoub MeanAlpha[3] = {0};//осредненные малые приращения углов (псевдокоординаты)
 		Ldoub MeanW[3] = {0}; //осредненные малые приращения скоростей
 
@@ -517,6 +715,149 @@ int main(int argc, char *argv[])
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
 		++cur_time;
+				/*
+		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
+		*/
+	#if 1
+	#if 1 //Модель для вектрора состояния 6
+		//Каждый такт пересчитываем матрицу A у фильтра Калмана
+		//Delta dot varphi (широта)
+		filter.A[index_3(dim_state, 0, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 0, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 0, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 0, 3)] = 1./(R + Coordinates[2]); //Voy
+		filter.A[index_3(dim_state, 0, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 0, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 0, 6)] = U*cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]), 2)); //Phi_oz
+		filter.A[index_3(dim_state, 0, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 0, 8)] = 0; //d_omega_y
+		//Delta dot lambda (долгота)
+		filter.A[index_3(dim_state, 1, 0)] = (Ldoub) tan(Coordinates[0])*V[0]/((R)*cos(Coordinates[0])); //varphi
+		filter.A[index_3(dim_state, 1, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 1, 2)] = (Ldoub) 1./((R + Coordinates[2])*cos(Coordinates[0])); //Vox
+		filter.A[index_3(dim_state, 1, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 1, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 1, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 1, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 1, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 1, 8)] = 0; //d_omega_y
+		// Delta dot V_ox
+		filter.A[index_3(dim_state, 2, 0)] = (Ldoub) (V[0]/((R + Coordinates[2])*pow(cos(Coordinates[0]),2)) + (Ldoub) 2*U*cos(Coordinates[0]) )*V[1]; //varphi
+		filter.A[index_3(dim_state, 2, 1)] = 0; //lambda 
+		filter.A[index_3(dim_state, 2, 2)] = (Ldoub) V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Vox
+		filter.A[index_3(dim_state, 2, 3)] = (Ldoub) V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + (Ldoub) 2*U*sin(Coordinates[0]); //Voy
+		filter.A[index_3(dim_state, 2, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 2, 5)] = (Ldoub) -Ao[2]; //Phi_oy
+		filter.A[index_3(dim_state, 2, 6)] = (Ldoub) tan(Coordinates[0])/(R + Coordinates[2]); //Phi_oz
+		filter.A[index_3(dim_state, 2, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 2, 8)] = 0; //d_omega_y
+		//Delta dot V_oy
+		filter.A[index_3(dim_state, 3, 0)] = (Ldoub) -(V[0]/((R + Coordinates[2])*pow(cos(Coordinates[0]),2)) + (Ldoub) 2*U*cos(Coordinates[0]) )*V[0]; //varphi
+		filter.A[index_3(dim_state, 3, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 3, 2)] = (Ldoub) -2.*(V[0]/(R + Coordinates[2])*tan(Coordinates[0]) + (Ldoub) U*sin(Coordinates[0])); //Vox
+		filter.A[index_3(dim_state, 3, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 3, 4)] = Ao[2]; //Phi_ox
+		filter.A[index_3(dim_state, 3, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 3, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 3, 7)] = 0;//d_omega_x
+		filter.A[index_3(dim_state, 3, 8)] = 0;//d_omega_y
+		//Phi_ox
+		filter.A[index_3(dim_state, 4, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 4, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 4, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 4, 3)] = (Ldoub) -1./(R + Coordinates[2]); //Voy
+		filter.A[index_3(dim_state, 4, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 4, 5)] = (Ldoub) omo[2]; //Phi_oy
+		filter.A[index_3(dim_state, 4, 6)] = (Ldoub) omo[1]; //Phi_oz
+		filter.A[index_3(dim_state, 4, 7)] = (Ldoub) (-Cbn[index_3(3, 0, 0)]);//d_omega_x
+		filter.A[index_3(dim_state, 4, 8)] = (Ldoub) (-Cbn[index_3(3, 0, 1)]);//d_omega_y
+		//Phi_oy
+		filter.A[index_3(dim_state, 5, 0)] = -U * sin(Coordinates[0]);//; //varphi
+		filter.A[index_3(dim_state, 5, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 5, 2)] = (Ldoub) 1./(R+Coordinates[2]); //Vox
+		filter.A[index_3(dim_state, 5, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 5, 4)] = (Ldoub) - omo[2]; //Phi_ox
+		filter.A[index_3(dim_state, 5, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 5, 6)] = -omo[0]; //Phi_oz
+		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
+		//Delta omega_x
+		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 6, 8)] = 0; //d_omega_y
+		//Delta omega_y
+		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 7, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 7, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 7, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 7, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 7, 8)] = 0; //d_omega_y
+	#else //ветрок состояния 3
+		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
+		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
+		filter.A[index_3(dim_state, 0, 2)] = 0; //d_omega_N
+		//
+		filter.A[index_3(dim_state, 1, 0)] = 1/(R+Coordinates[2]); //Ve
+		filter.A[index_3(dim_state, 1, 1)] = 0; //Phi_N
+		filter.A[index_3(dim_state, 1, 2)] = 1; //d_omega_N
+		//
+		filter.A[index_3(dim_state, 2, 0)] = 0; //Ve
+		filter.A[index_3(dim_state, 2, 1)] = 0; //Phi_N
+		filter.A[index_3(dim_state, 2, 2)] = 0; //d_omega_N
+	#endif
+		if (!filter.init) //Если ранее не было инициализации, то инициализируем
+		{
+			filter.Init(x0, q, /*r,*/ H);
+		}
+		else//в противном случае оцениваем
+		{
+			for (int iii =0; iii < filter.getDimX()*filter.getDimX(); ++iii) //вычисляю матрицу перехода Phi
+				filter.Phi[iii] = filter.I[iii] + filter.A[iii] * h; //не забываем умножить на такт интегрирования
+		#if 1
+			for (int iii=0; iii<2; ++iii)
+				ErrVins[iii] = Coordinates[iii] - CooGps[iii]; //разница ошибок координат ИНС и СНС
+		#endif
+			for (int iii=2; iii<filter.getDimZ(); ++iii)
+				ErrVins[iii] = V[iii-2] - Vgps[iii-2]; //разница ошибок скоростей ИНС и СНС
+			filter.Predict();
+			filter.Update(ErrVins);
+			#ifdef dev //сравнение результатов вычисления всех атрибутов ФК с программой на Python
+
+			printf("x_1 = ");
+			filter.Print2dMatr(filter.x_1, filter.getDimX(), 1);
+			printf("Papr = ");
+			filter.Print2dMatr(filter.Papr, filter.getDimX(), filter.getDimX());
+			printf("v = ");
+			filter.Print2dMatr(filter.v, filter.getDimZ(), 1);
+			printf("C = ");
+			filter.Print2dMatr(filter.C, filter.getDimZ(), filter.getDimZ());
+			printf("R = ");
+			filter.Print2dMatr(filter.R, filter.getDimZ(), filter.getDimZ());
+			printf("K = ");
+			filter.Print2dMatr(filter.K, filter.getDimX(), filter.getDimZ());
+			printf("x = ");
+			filter.Print2dMatr(filter.x, filter.getDimX(), 1);
+			printf("Papst = ");
+			filter.Print2dMatr(filter.Papst, filter.getDimX(), filter.getDimX());	
+			printf("Kiter = %d", filter.iter);
+			#endif
+			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
+
+		#if 0
+			for (int iii=0; iii<2; ++iii)
+				V[iii] -= filter.x[iii]; // коррекция скоростей ИНС
+		#endif
+		}
+	#endif
 
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
@@ -704,6 +1045,115 @@ int main(int argc, char *argv[])
 
 			fprintf(navig_res, "\n");
 		}
+
+		#if 1 //Запись в файл данных для оценивания дрейфов программой для дипломной работы (на Python)
+		static FILE* for_Kalman;
+		if(!for_Kalman)
+		{
+			for_Kalman=fopen("./data/For_Kalman.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,longitude,Ve_gps,Vn_gps
+			// Шапка
+			fprintf(for_Kalman, "Timestamp,");
+			fprintf(for_Kalman, "a_ll_x,");
+			fprintf(for_Kalman, "a_ll_y,");
+			fprintf(for_Kalman, "a_ll_z,");
+			fprintf(for_Kalman, "omega_s_x,");
+			fprintf(for_Kalman, "omega_s_y,");
+			fprintf(for_Kalman, "omega_s_z,");
+			fprintf(for_Kalman, "Ve_ins,");
+			fprintf(for_Kalman, "Vn_ins,");
+			fprintf(for_Kalman, "heading,");
+			fprintf(for_Kalman, "roll,");
+			fprintf(for_Kalman, "pitch,");
+			fprintf(for_Kalman, "latitude,");
+			fprintf(for_Kalman, "longitude,");
+			fprintf(for_Kalman, "Ve_gps,");
+			fprintf(for_Kalman, "Vn_gps,");
+			for (int iii=0; iii<3; ++iii)
+				for (int jjj=0; jjj<3; ++jjj)
+					fprintf(for_Kalman, "C%d%d,",iii,jjj); //Элементы матрицы перехода из связанной в опорную
+			fprintf(for_Kalman, "\n");
+		}
+
+		if(for_Kalman)
+		{
+			fprintf(for_Kalman, "%d,", cur_time);
+
+			// Ускорения в опорной с.к
+			for(int i=0; i<3; ++i)
+				fprintf(for_Kalman, "%.10e,", Ao[i]);
+			// Асболютная (?) угловая скорость опорной с.к
+			for(int i=0; i<3; ++i)
+				fprintf(for_Kalman, "%.10e,", omo[i]);
+			// Скорости в горизонте
+			for(int i=0; i<2; ++i)
+				fprintf(for_Kalman, "%.10e,", V[i]);
+			// Углы оориентации
+			for(int i=0; i<3; ++i)
+				fprintf(for_Kalman, "%.10e,", Orientation[i]);
+			//Скоординаты
+			for(int i=0; i<2; ++i)
+				fprintf(for_Kalman, "%.10e,", Coordinates[i]);
+			//Скорости от GPS
+			for (int iii=0; iii<2; ++iii)
+				fprintf(for_Kalman, "%.10e,", Vgps[iii]);
+				
+			for (int iii=0; iii<3; ++iii)
+				for (int jjj=0; jjj<3; ++jjj)
+					fprintf(for_Kalman, "%.10e,", Cbn[index_3(3, iii, jjj)]); //Элементы матрицы перехода из связанной в опорную
+			
+			fprintf(for_Kalman, "\n");
+		}
+		fflush(for_Kalman);
+#endif
+
+#if 1 
+		//Запись в файл оцененного вектора состояния
+		static FILE* estimations;
+		if(!estimations)
+		{
+			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
+			// Шапка
+		#if 1 //Для вектора состояния размерности 8
+			fprintf(estimations, "varphi,");
+			fprintf(estimations, "lambda,");
+			fprintf(estimations, "Ve,");
+			fprintf(estimations, "Vn,");
+			fprintf(estimations, "Phi_e,");
+			fprintf(estimations, "Phi_n,");
+			fprintf(estimations, "Phi_z,");
+			fprintf(estimations, "d_omega_x,");
+			fprintf(estimations, "d_omega_y,");
+			fprintf(estimations, "d_Psi,");
+			fprintf(estimations, "d_Roll,");
+			fprintf(estimations, "d_Pitch,");
+			fprintf(estimations, "\n");
+		#else
+			fprintf(estimations, "Ve,");
+			fprintf(estimations, "Phi_n,");
+			fprintf(estimations, "d_omega_y,");
+			fprintf(estimations, "d_Roll,");
+			fprintf(estimations, "d_Pitch,");
+			fprintf(estimations, "\n");
+		#endif
+		}
+
+		if(estimations)
+		{
+			fprintf(estimations, "%d,", cur_time);
+
+			// весь вектор состояния
+			for(int i=0; i<dim_state; ++i)
+				fprintf(estimations, "%.10e,", filter.x[i]);
+			double d_psi (filter.x[6] - (filter.x[3+2] * cos(Orientation[0]) + filter.x[2+2] * sin(Orientation[0]))*tan(Orientation[2])); //это угол курса, а нек ошибки курса
+			double d_roll = -(filter.x[3+2] * cos(Orientation[0]) + filter.x[2+2] * sin(Orientation[0])) * (1./cos(Orientation[2]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			double d_pitch = -(filter.x[2+2] * cos(Orientation[0]) - filter.x[3+2] * sin(Orientation[0]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			fprintf(estimations, "%.10e,", d_psi);
+			fprintf(estimations, "%.10e,", d_roll);
+			fprintf(estimations, "%.10e,", d_pitch);
+			fprintf(estimations, "\n");
+		}
+		fflush(estimations);
+#endif
 #endif
 		fflush(navig_res);
 
