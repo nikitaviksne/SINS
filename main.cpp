@@ -13,7 +13,6 @@
 #include "UsualKalman.h" //Для обычного фильтра Калмана
 #define _USE_MATH_DEFINES
 #include <stdlib.h>
-#include "quaternions.h"
 
 #define dev
 
@@ -285,7 +284,7 @@ int main(int argc, char *argv[])
 	// массивы для выходных значений
 	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
-	Ldoub CoordError[3] = {0}; // Ошибки в м (dE, dN)
+	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
 
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
@@ -344,8 +343,8 @@ int main(int argc, char *argv[])
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, dim_state-2, dim_state-2)] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
-	q[index_3(dim_state, dim_state-1, dim_state-1)] = 1e-17 * pow(h, 2);
+	q[index_3(dim_state, 7, 7)] = 1e-17 * pow(h, 2); //* pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
+	q[index_3(dim_state, 8, 8)] = 1e-17 * pow(h, 2);
 	#else // вектор состояния 3
 	H[index_3(dim_state, 0, 0)] = 1;
 	//Матрца ковариации входных шумов (модели)
@@ -438,7 +437,7 @@ int main(int argc, char *argv[])
 		if (cur_time == int(70*60/h) )
 			allowCorr = false;
 	#endif
-	for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
+		for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
 		{
 			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
@@ -584,17 +583,17 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 6)] = -omo[0]; //Phi_oz
 		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
 		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
-		//Phi_oz
-		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R * pow(cos(Coordinates[0]),2));//; //varphi
-		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
-		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) 1./(R+Coordinates[2])*tan(Coordinates[0]); //Vox
-		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
-		filter.A[index_3(dim_state, 6, 4)] = (Ldoub) omo[1]; //Phi_ox
-		filter.A[index_3(dim_state, 6, 5)] = - omo[0]; //Phi_oy
-		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
-		filter.A[index_3(dim_state, 6, 7)] = (Ldoub) (-Cbn[index_3(3, 2, 0)]); //d_omega_x
-		filter.A[index_3(dim_state, 6, 8)] = (Ldoub) (-Cbn[index_3(3, 2, 1)]); //d_omega_y
 		//Delta omega_x
+		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 6, 8)] = 0; //d_omega_y
+		//Delta omega_y
 		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
 		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
 		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
@@ -604,16 +603,6 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 7, 6)] = 0; //Phi_oz
 		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 7, 8)] = 0; //d_omega_y
-		//Delta omega_y
-		filter.A[index_3(dim_state, 8, 0)] = 0; //varphi
-		filter.A[index_3(dim_state, 8, 1)] = 0; //lambda
-		filter.A[index_3(dim_state, 8, 2)] = 0; //Vox
-		filter.A[index_3(dim_state, 8, 3)] = 0; //Voy
-		filter.A[index_3(dim_state, 8, 4)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 8, 5)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 8, 6)] = 0; //Phi_oz
-		filter.A[index_3(dim_state, 8, 7)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 8, 8)] = 0; //d_omega_y
 	#else //ветрок состояния 3
 		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
@@ -660,6 +649,8 @@ int main(int argc, char *argv[])
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
+			fprintf(navig_res, "errVe;");
+			fprintf(navig_res, "errVn;");
 			fprintf(navig_res, "Phi;");
 			fprintf(navig_res, "Lambda;");
 			fprintf(navig_res, "Height;");
@@ -679,6 +670,9 @@ int main(int argc, char *argv[])
 			// Скорости
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", V[i]);
+			//Ошибки по скорости
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", Err_V[i]);
 			// Координаты
 			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", Coordinates[i]);
@@ -797,9 +791,7 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "\n");
 		}
 		fflush(estimations);
-		//std::cin.get();
 #endif
 	} //чтение из файла while( !in.eof())
-	printf("Алгоритм ИНС закончил моделирование\n");
 	return 0;
 }
