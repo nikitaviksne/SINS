@@ -532,17 +532,17 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 6)] = -omo[0]; //Phi_oz
 		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
 		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
-		//Delta omega_x
-		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		//Phi_oz
+		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R * pow(cos(Coordinates[0]),2));//; //varphi
 		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
-		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) 1./(R+Coordinates[2])*tan(Coordinates[0]); //Vox
 		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
-		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 4)] = (Ldoub) omo[1]; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = - omo[0]; //Phi_oy
 		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
-		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 6, 8)] = 0; //d_omega_y
-		//Delta omega_y
+		filter.A[index_3(dim_state, 6, 7)] = (Ldoub) (-Cbn[index_3(3, 2, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 6, 8)] = (Ldoub) (-Cbn[index_3(3, 2, 1)]); //d_omega_y
+		//Delta omega_x
 		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
 		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
 		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
@@ -552,6 +552,16 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 7, 6)] = 0; //Phi_oz
 		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 7, 8)] = 0; //d_omega_y
+		//Delta omega_y
+		filter.A[index_3(dim_state, 8, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 8, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 8, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 8, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 8, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 8, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 8, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 8, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 8, 8)] = 0; //d_omega_y
 	#else //ветрок состояния 3
 		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
@@ -742,5 +752,6 @@ int main(int argc, char *argv[])
 		fflush(estimations);
 #endif
 	} //чтение из файла while( !in.eof())
+	printf("Алгоритм ИНС закончил моделирование\n");
 	return 0;
 }
