@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
 	int freq = freq1/4;//100; // частота измерений с инерциальных датчиков
 	Ldoub h (1./freq); //период дискретизации
 	int t_nav = 180*60; // время работы нав алгоритма в секундах
-	int t_alignment = (int) 5*60*freq1; // время выставки в тактах
+	int t_alignment = (int) 5*60*freq; // время выставки в тактах
 	Ldoub Rlambda;
 	Ldoub Rphi;
 	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
@@ -278,6 +278,7 @@ int main(int argc, char *argv[])
 	Ldoub StdOmb[3] = {0};
 	Ldoub Cbn[9] = {0};
 	Ldoub Cib[9] = {0}; //матрица перехода из инерциальной системы в связанную. Начальное значение равно транспонированной матрицы на момент окончания выставки
+	quaternion Qf; //медленный (филнальный) кватернион. Быстрый в функции решение задачи ориентации
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
 	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
@@ -374,7 +375,7 @@ int main(int argc, char *argv[])
 			#else
 			res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
 			#endif
-			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn);
+			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn, &Qf);
 			++cur_time; // для 400 Гц
 			/*
 			printf("Mean Omb\n");
@@ -386,6 +387,20 @@ int main(int argc, char *argv[])
 		{
 			if (AlignmentContinue)
 			{
+				printf("Cbn перед переводом из кватерниона\n");
+				printf("[");
+				for (int iii=0; iii<9; ++iii)
+					printf("%.10f, ", Cbn[iii]);
+				printf("]\n");
+				Qf.print();
+				Quat2Matr(Qf, Cbn);//проверка правильности работы функции
+
+				printf("Cbn после перевода из кватерниона\n");
+				printf("[");
+				for (int iii=0; iii<9; ++iii)
+					printf("%.10f, ", Cbn[iii]);
+				printf("]\n");
+
 				printf("Mean Omb not in Mean\n");
 				print2dMatr(MeanOmb, 1, 3);
 				Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
@@ -440,9 +455,11 @@ int main(int argc, char *argv[])
 	#endif
 		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
 		/*Далее идет 100 Гц такт*/
+		for (int iii=0; iii<3; iii++)
+			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
 		//Решение задачи ориентации
 		Ldoub omo[3] = { 0 }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
-		SolveOrient(Omb, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
+		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 
 		/*Решение задачи навигации*/
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции

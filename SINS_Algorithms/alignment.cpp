@@ -2,15 +2,16 @@
 #include "std.h"
 #include "mathematics.h"
 #include <cmath>
+#include "quaternions.h"
 
-void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *MeanOmb, Ldoub *StdAb, Ldoub *StdOmb, int iter, const Ldoub g, const Ldoub U, Ldoub phi0, /*выходные*/Ldoub *Cbn)
+void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *MeanOmb, Ldoub *StdAb, Ldoub *StdOmb, int iter, const Ldoub g, const Ldoub U, Ldoub phi0, /*выходные*/Ldoub *Cbn, quaternion *Qf)
 {	/*процедура выставки (Б)ИНС*/
 	for(int i=0; i<3; ++i)
 	{
 		// применяем метод Уэлфорда
-			MeanAb[i] = (Ldoub) MeanAb[i] + (Ab[i] - MeanAb[i]) / (iter + 1); //(iter * MeanAb[i] + Ab[i])/(iter + 1);
+			MeanAb[i] = (Ldoub) (iter * MeanAb[i] + Ab[i])/(iter + 1); //MeanAb[i] + (Ab[i] - MeanAb[i]) / (iter + 1);
 			StdAb[i] = (Ldoub) (1 - 1/(iter + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(iter + 1);
-			MeanOmb[i] = (Ldoub) MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (iter + 1);//(iter * MeanOmb[i] + Omb[i])/(iter + 1);
+			MeanOmb[i] = (Ldoub) (iter * MeanOmb[i] + Omb[i])/(iter + 1);//MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (iter + 1);
 			StdOmb[i] = (Ldoub) (1 - 1/(iter + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(iter + 1);
 	}
 	//Вычисление (ориентации) матрицы перехода Cbn = [c00, c01, c02, c10, c11, c12, c20, c21, c22]
@@ -33,4 +34,6 @@ void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *Me
 	TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 1)], res1, err1);
 	TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 0)], res2, err2);
 	Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
+
+	Matr2Quat(Cbn, Qf);
 }

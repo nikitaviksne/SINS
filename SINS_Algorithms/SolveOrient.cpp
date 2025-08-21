@@ -2,14 +2,15 @@
 #include "std.h"
 #include "matrix.h"
 #include <cmath>
-
+#include "quaternions.h"
 //#define dev
 #ifdef dev
 #include <stdio.h>
 #endif
 
-void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw, Ldoub k2, Ldoub* DVerr, bool allowCorr)
+void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw, Ldoub k2, Ldoub* DVerr, bool allowCorr)
 {
+#if 0
     Ldoub Thet4[3] = {0}; //Вектор Эйлера
 	for (int mmm=0; mmm<3; ++mmm)
 		for (int kkk=0; kkk<4; ++kkk)
@@ -162,5 +163,45 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 	Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
 	Orientation[2] = (Ldoub) atan2(Cbn[index_3(3, 2, 1)],c0);
 	/*Проверка ре*/
-		
+#endif
+	//Вычисление переносных, относительных и абсолютных угловых скоростей опопрной системы координат
+	Omo[0] = (Ldoub) -V[1]/(Rphi + Coordinates[2]);
+	Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
+	Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]); // tan(phi0)
+
+	omo[0] = (Ldoub) Omo[0] - allowCorr * k2/Rphi * DVerr[1]; 
+    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]) + allowCorr * k2/Rphi * DVerr[0];
+    omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
+	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
+	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
+
+	Ldoub F;
+	MulMatrD(Omb, Omb, &F, 1, 3, 1); //сумма квадратов элементов Omb
+	F = sqrt(F);
+	quaternion DL(cos(F/2.), Omb[0]/F*sin(F*h/2.), Omb[1]/F*sin(F*h/2.), Omb[2]/F*sin(F*h/2.));
+
+	quaternion Qp = (*Qf)*DL; //предварительный (быстрый) кватернион
+
+	Ldoub Om0;
+	MulMatrD(omo, omo, &Om0, 1, 3, 1); //сумма квадратов элементов Omb
+	Om0 = sqrt(Om0);
+
+	quaternion Dm(cos(Om0*h/2.), -omo[0]/Om0*sin(Om0*h/2.), -omo[1]/Om0*sin(Om0*h/2.), -omo[2]/Om0*sin(Om0*h/2.));
+	quaternion tempQuat = Dm*(Qp);
+	
+	//Костыль выглядит так, вообще, хотелось сделать Qf = Dm * (Qp)
+	Qf->w = tempQuat.w;
+	Qf->x = tempQuat.x;
+	Qf->y = tempQuat.y;
+	Qf->z = tempQuat.z;
+
+	Qf->normalize(1e-5);
+
+	Quat2Matr(Qf, Cbn); //пересчет кватерниона в матрицу
+
+	// вычисление углов ориентации через МНК (как в выставке)
+	Orientation[0] = (Ldoub) atan2(Cbn[index_3(3, 0, 1)],Cbn[index_3(3, 1, 1)]);
+	Orientation[1] =  (Ldoub) - atan2(Cbn[index_3(3, 2, 0)],Cbn[index_3(3, 2, 2)]);
+	Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
+	Orientation[2] = (Ldoub) atan2(Cbn[index_3(3, 2, 1)],c0);
 }

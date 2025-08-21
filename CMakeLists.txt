@@ -79,6 +79,17 @@ set(Source_Kalman
 add_library(kalman STATIC ${Source_Kalman})
 target_include_directories(kalman PUBLIC ${Headers_Kalman})
 
+# Библиотека кватернионов
+set(Headers_Quaternions
+		include/
+	)
+set(Source_Quaternions
+		quaternions.cpp
+	)
+#message(STATUS Source_Kalman, ${Source_Kalman})
+add_library(quaternions STATIC ${Source_Quaternions})
+target_include_directories(quaternions PUBLIC ${Headers_Quaternions})
+
 # Tell CMake to run moc when necessary:
 #set(CMAKE_AUTOMOC ON)
 #set(CMAKE_AUTOUIC ON)
@@ -98,4 +109,5 @@ target_link_libraries(main
 	ins 
 	kalman 
 	alglib
+	quaternions
 )

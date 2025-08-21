@@ -38,7 +38,7 @@ a = 6378245;
 b = 6356856;
 e=np.sqrt(1 - b*b/a/a);
 
-freq = 400; # частота (измерений за 1 секунду)
+freq = 100; # частота (измерений за 1 секунду)
 t_nav = 90*60 # в секундах
 num_samples = t_nav*freq;
 time_to_alignment = 5*60; # время выставки в секундах
@@ -66,7 +66,7 @@ heading0 = np.deg2rad(90)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
-file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_freq_400_turn_V_coo_gps.{extention_out_file}"
+file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_freq_{freq}_turn_V_coo_gps.{extention_out_file}"
 C_n_b = matrix_o_b(heading0, roll, pitch)
 
 '''Систематические дрейфы'''
