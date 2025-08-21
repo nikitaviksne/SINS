@@ -5,7 +5,7 @@
 #include "std.h"
 #include <stdio.h>
 
-// #define dev
+//#define dev
 
 AdaptiveKalman::AdaptiveKalman(int dimx, int dimz)
 {
@@ -95,6 +95,20 @@ void AdaptiveKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 void AdaptiveKalman::Predict()
 {
 	matMul(getDimX(), getDimX(), 1, Phi, x, x_1); //предсказываем вектор состояния x_1  = Phi @ x
+#ifdef dev
+	printf("Phi:\n");
+	Print2dMatr(Phi, getDimX(), getDimX());
+#endif
+
+#ifdef dev
+	printf("x:\n");
+	Print2dMatr(x, getDimX(), 1);
+#endif
+
+#ifdef dev
+	printf("x_1:\n");
+	Print2dMatr(x_1, getDimX(), 1);
+#endif
 
 	/*предсказываем априорную ошибку оценивания (используя апостериорную и ковариацию входного шума)*/
 
@@ -127,6 +141,15 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	matMul(getDimZ(), getDimX(), 1, H, x_1, Hx_1);
 	for (int iii=0; iii<getDimZ(); ++iii)
 		v[iii] = this->z[iii] - Hx_1[iii];
+#ifdef dev
+	printf("z:\n");
+	Print2dMatr(z, getDimZ(), 1);
+#endif
+#ifdef dev
+	printf("Hx_1:\n");
+	Print2dMatr(Hx_1, getDimZ(), 1);
+#endif
+
 #ifdef dev
 	printf("v:\n");
 	Print2dMatr(v, getDimZ(), 1);

@@ -66,7 +66,9 @@ void SolveOrient(Ldoub* alpha, Ldoub* Cib, Ldoub* Cin, Ldoub* Cbn, Ldoub* Orient
 
 	
 	//Ldoub EigWb[9] = {0, -Omb[2], Omb[1], Omb[2], 0, -Omb[0], -Omb[1], Omb[0], 0};
-	Ldoub EigWo[9] = {0, -omo[2], omo[1], omo[2], 0, -omo[0], -omo[1], omo[0], 0};
+	Ldoub EigWo[9] = {0, -omo[2], omo[1], 
+					omo[2], 0, -omo[0], 
+					-omo[1], omo[0], 0};
 	//Ldoub EigWo[9] = {0, -Omo[2], Omo[1], Omo[2], 0, -Omo[0], -Omo[1], Omo[0], 0};
 	Ldoub EigWo2[9]={0};//квадрат кососиметрической матрицы абсолютной голвой скорости опорной с.к
 	

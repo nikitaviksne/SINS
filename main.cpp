@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 	// массивы для выходных значений
 	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
-	Ldoub CoordError[2] = {0}; // Ошибки в м (dE, dN)
+	Ldoub CoordError[3] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
 
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
@@ -338,14 +338,14 @@ int main(int argc, char *argv[])
 	#if 1 // вектор состояния 6
 	H[index_3(dim_state, 0, 0)] = 1.; //varphi широта
 	H[index_3(dim_state, 1, 1)] = 1.; //lambda долгота
-	H[index_3(dim_state, 2, 2)] = 0.; //Ve
-	H[index_3(dim_state, 3, 3)] = 0.; //Vn
+	H[index_3(dim_state, 2, 2)] = 1.; //Ve
+	H[index_3(dim_state, 3, 3)] = 1.; //Vn
 	print2dMatr(H, dim_sense, dim_state);
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, 7, 7)] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
-	q[index_3(dim_state, 8, 8)] = 1e-17 * pow(h, 2);
+	q[index_3(dim_state, dim_state-2, dim_state-2)] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
+	q[index_3(dim_state, dim_state-1, dim_state-1)] = 1e-17 * pow(h, 2);
 	#else // вектор состояния 3
 	H[index_3(dim_state, 0, 0)] = 1;
 	//Матрца ковариации входных шумов (модели)
@@ -438,11 +438,80 @@ int main(int argc, char *argv[])
 		if (cur_time == int(70*60/h) )
 			allowCorr = false;
 	#endif
-		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
+	for (int in_iter=0; in_iter < 4; ++in_iter) // 4 такта, нумерация с нуля, поэтому равенство нестрогое
+		{
+			//GeneratedSens(Ab, Omb, Vabs, H0, cur_time, t_alignment, U, g, Cnb);
+			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
+			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
+			#else //в противном случае, читаем, что есть
+			res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
+			#endif
+		#if 1
+			//Накапливаем данные 4 тактов и заодно осредним псевдокоординаты
+			for (int iii=0; iii<3; ++iii)
+			{
+				alpha[index_3(4, iii, in_iter)] = (Ldoub) Omb[iii]*h1;
+				MeanAlpha[iii] = (Ldoub) MeanAlpha[iii] + (Omb[iii] - MeanAlpha[iii]) / (in_iter + 1);
+				w[index_3(4, iii, in_iter)] = (Ldoub) Ab[iii]*h1;
+				MeanW[iii] = (Ldoub) MeanW[iii] + (w[iii] - MeanW[iii]) / (in_iter + 1);
+			}
+			//Определение приращения скорости для каждого значения сверхбыстрого цикла
+			//кососиметрическая матрица псевдокоординат
+			Ldoub EigAl[9] = {0, -Omb[2]*h1, Omb[1]*h1, Omb[2]*h1, 0, -Omb[0]*h1, -Omb[1]*h1, Omb[0]*h1, 0};
+			//вычисляем k1
+			Ldoub k1[3] = {0};
+			Ldoub al_w[3] = {0}; //вспомогательная матрица
+
+			MulMatrD(EigAl, Wp, al_w, 3,3,1);
+
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k1[nnn] = w[index_3(4, nnn, in_iter)] - al_w[nnn];
+			}
+			//вычисляем k2
+			Ldoub k2[3]={0.};
+			Ldoub temp_w_k[3] = {0.};
+
+			for (int i=0; i<3; i++)
+				temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k1[i];
+
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k2[nnn] = (Ldoub) w[index_3(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//вычисляем k3
+			Ldoub k3[3]={0.};
+
+			for (int i=0; i<3; i++) temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1/2.*k2[i];
+
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k3[nnn] = (Ldoub) w[index_3(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//вычисляем k4
+			Ldoub k4[3]={0.};
+			for (int i=0; i<3; i++)
+				temp_w_k[i] = (Ldoub) Wp[i] + (Ldoub) h1*k3[i];
+
+			MulMatrD(EigAl, temp_w_k, al_w, 3,3,1);
+
+			for (int nnn=0; nnn<3; ++nnn)
+			{
+				k4[nnn] = (Ldoub) w[index_3(4, nnn, in_iter)] - (Ldoub) al_w[nnn];
+			}
+			//считаем приращение скорости
+			for (int ii=0; ii<3; ++ii)
+			{
+				Wp[ii] = (Ldoub) Wp[ii] +  (Ldoub) 1./6*(k1[ii] + 2.*k2[ii] + 2.*k3[ii] + k4[ii]);
+			}
+		#endif
+		}
 		/*Далее идет 100 Гц такт*/
 		//Решение задачи ориентации
 		Ldoub omo[3] = { 0 }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
-		SolveOrient(Omb, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
+		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 
 		/*Решение задачи навигации*/
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
@@ -515,17 +584,17 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 6)] = -omo[0]; //Phi_oz
 		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
 		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
-		//Delta omega_x
-		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		//Phi_oz
+		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R * pow(cos(Coordinates[0]),2));//; //varphi
 		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
-		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) 1./(R+Coordinates[2])*tan(Coordinates[0]); //Vox
 		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
-		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 4)] = (Ldoub) omo[1]; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = - omo[0]; //Phi_oy
 		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
-		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 6, 8)] = 0; //d_omega_y
-		//Delta omega_y
+		filter.A[index_3(dim_state, 6, 7)] = (Ldoub) (-Cbn[index_3(3, 2, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 6, 8)] = (Ldoub) (-Cbn[index_3(3, 2, 1)]); //d_omega_y
+		//Delta omega_x
 		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
 		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
 		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
@@ -535,6 +604,16 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 7, 6)] = 0; //Phi_oz
 		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 7, 8)] = 0; //d_omega_y
+		//Delta omega_y
+		filter.A[index_3(dim_state, 8, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 8, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 8, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 8, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 8, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 8, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 8, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 8, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 8, 8)] = 0; //d_omega_y
 	#else //ветрок состояния 3
 		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
@@ -723,7 +802,9 @@ int main(int argc, char *argv[])
 			fprintf(estimations, "\n");
 		}
 		fflush(estimations);
+		//std::cin.get();
 #endif
 	} //чтение из файла while( !in.eof())
+	printf("Алгоритм ИНС закончил моделирование\n");
 	return 0;
 }
