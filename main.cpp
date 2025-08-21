@@ -530,7 +530,7 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 0, 3)] = 1./(R + Coordinates[2]); //Voy
 		filter.A[index_3(dim_state, 0, 4)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 0, 5)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 0, 6)] = U*cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]), 2)); //Phi_oz
+		filter.A[index_3(dim_state, 0, 6)] = 0;//U*cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]), 2)); //Phi_oz
 		filter.A[index_3(dim_state, 0, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 0, 8)] = 0; //d_omega_y
 		//Delta dot lambda (долгота)
@@ -544,13 +544,13 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 1, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 1, 8)] = 0; //d_omega_y
 		// Delta dot V_ox
-		filter.A[index_3(dim_state, 2, 0)] = (Ldoub) (V[0]/((R + Coordinates[2])*pow(cos(Coordinates[0]),2)) + (Ldoub) 2*U*cos(Coordinates[0]) )*V[1]; //varphi
+		filter.A[index_3(dim_state, 2, 0)] = (Ldoub) (V[0]/((R + Coordinates[2])*pow(cos(Coordinates[0]),2)) + (Ldoub) 2*U*cos(Coordinates[0]) )*V[2]; //varphi
 		filter.A[index_3(dim_state, 2, 1)] = 0; //lambda 
 		filter.A[index_3(dim_state, 2, 2)] = (Ldoub) V[1]/(R+Coordinates[2])*tan(Coordinates[0]); //Vox
 		filter.A[index_3(dim_state, 2, 3)] = (Ldoub) V[0]/(R+Coordinates[2])*tan(Coordinates[0]) + (Ldoub) 2*U*sin(Coordinates[0]); //Voy
 		filter.A[index_3(dim_state, 2, 4)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 5)] = (Ldoub) -Ao[2]; //Phi_oy
-		filter.A[index_3(dim_state, 2, 6)] = (Ldoub) tan(Coordinates[0])/(R + Coordinates[2]); //Phi_oz
+		filter.A[index_3(dim_state, 2, 6)] = (Ldoub) Ao[1]; //Phi_oz
 		filter.A[index_3(dim_state, 2, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 2, 8)] = 0; //d_omega_y
 		//Delta dot V_oy
@@ -560,7 +560,7 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 3, 3)] = 0; //Voy
 		filter.A[index_3(dim_state, 3, 4)] = Ao[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 5)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 3, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 3, 6)] = -Ao[0]; //Phi_oz
 		filter.A[index_3(dim_state, 3, 7)] = 0;//d_omega_x
 		filter.A[index_3(dim_state, 3, 8)] = 0;//d_omega_y
 		//Phi_ox
@@ -570,7 +570,7 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 4, 3)] = (Ldoub) -1./(R + Coordinates[2]); //Voy
 		filter.A[index_3(dim_state, 4, 4)] = 0; //Phi_ox
 		filter.A[index_3(dim_state, 4, 5)] = (Ldoub) omo[2]; //Phi_oy
-		filter.A[index_3(dim_state, 4, 6)] = (Ldoub) omo[1]; //Phi_oz
+		filter.A[index_3(dim_state, 4, 6)] = (Ldoub) -omo[1]; //Phi_oz
 		filter.A[index_3(dim_state, 4, 7)] = (Ldoub) (-Cbn[index_3(3, 0, 0)]);//d_omega_x
 		filter.A[index_3(dim_state, 4, 8)] = (Ldoub) (-Cbn[index_3(3, 0, 1)]);//d_omega_y
 		//Phi_oy
@@ -580,20 +580,20 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 3)] = 0; //Voy
 		filter.A[index_3(dim_state, 5, 4)] = (Ldoub) - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 5, 5)] = 0; //Phi_oy
-		filter.A[index_3(dim_state, 5, 6)] = -omo[0]; //Phi_oz
+		filter.A[index_3(dim_state, 5, 6)] = omo[0]; //Phi_oz
 		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
 		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
-		//Delta omega_x
-		filter.A[index_3(dim_state, 6, 0)] = 0; //varphi
+		//Phi_oz
+		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R*pow(Coordinates[0],2));//; //varphi
 		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
-		filter.A[index_3(dim_state, 6, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) tan(Coordinates[0])/(R+Coordinates[2]); //Vox
 		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy
-		filter.A[index_3(dim_state, 6, 4)] = 0; //Phi_ox
-		filter.A[index_3(dim_state, 6, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 6, 4)] = (Ldoub) omo[1]; //Phi_ox
+		filter.A[index_3(dim_state, 6, 5)] = - omo[0]; //Phi_oy
 		filter.A[index_3(dim_state, 6, 6)] = 0; //Phi_oz
-		filter.A[index_3(dim_state, 6, 7)] = 0; //d_omega_x
-		filter.A[index_3(dim_state, 6, 8)] = 0; //d_omega_y
-		//Delta omega_y
+		filter.A[index_3(dim_state, 6, 7)] = (Ldoub) (-Cbn[index_3(3, 2, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 6, 8)] = (Ldoub) (-Cbn[index_3(3, 2, 1)]); //d_omega_y
+		//Delta omega_x
 		filter.A[index_3(dim_state, 7, 0)] = 0; //varphi
 		filter.A[index_3(dim_state, 7, 1)] = 0; //lambda
 		filter.A[index_3(dim_state, 7, 2)] = 0; //Vox
@@ -603,6 +603,16 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 7, 6)] = 0; //Phi_oz
 		filter.A[index_3(dim_state, 7, 7)] = 0; //d_omega_x
 		filter.A[index_3(dim_state, 7, 8)] = 0; //d_omega_y
+		//Delta omega_y
+		filter.A[index_3(dim_state, 8, 0)] = 0; //varphi
+		filter.A[index_3(dim_state, 8, 1)] = 0; //lambda
+		filter.A[index_3(dim_state, 8, 2)] = 0; //Vox
+		filter.A[index_3(dim_state, 8, 3)] = 0; //Voy
+		filter.A[index_3(dim_state, 8, 4)] = 0; //Phi_ox
+		filter.A[index_3(dim_state, 8, 5)] = 0; //Phi_oy
+		filter.A[index_3(dim_state, 8, 6)] = 0; //Phi_oz
+		filter.A[index_3(dim_state, 8, 7)] = 0; //d_omega_x
+		filter.A[index_3(dim_state, 8, 8)] = 0; //d_omega_y
 	#else //ветрок состояния 3
 		filter.A[index_3(dim_state, 0, 0)] = 0; //Ve
 		filter.A[index_3(dim_state, 0, 1)] = -Ao[2]; //Phi_N
@@ -793,5 +803,6 @@ int main(int argc, char *argv[])
 		fflush(estimations);
 #endif
 	} //чтение из файла while( !in.eof())
+	printf("Алгоритм ИНС закончил моделирование\n");
 	return 0;
 }
