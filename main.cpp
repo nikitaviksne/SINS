@@ -230,8 +230,8 @@ int main(int argc, char *argv[])
 {
 	//инициализация необходимых переменных и констант
 	const Ldoub g = 9.81;
-	const Ldoub a = 6378245;
-	const Ldoub b = 6356856;
+	const Ldoub a = 6378245.;
+	const Ldoub b = 6356856.;
 	const Ldoub e = sqrt(1 - b*b/a/a);
 	const Ldoub R = 6400e3;
 	const Ldoub pi = 3.141592653589793;
@@ -345,9 +345,9 @@ int main(int argc, char *argv[])
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, 7, 7)] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
-	q[index_3(dim_state, 8, 8)] = 1e-17 * pow(h, 2);
-	printf("Для сравнения index_3(dim_state-2) = %d, index_3(7) = %d, dim_state - 2 (%d-2) = %d\n", index_3(dim_state, dim_state-2, dim_state - 2), index_3(dim_state, 7, 7), dim_state, dim_state-2);
+	q[index_3(dim_state, (dim_state - 2), (dim_state - 2))] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
+	q[index_3(dim_state, (dim_state - 1), (dim_state - 1))] = 1e-17 * pow(h, 2);
+	//printf("Для сравнения index_3(dim_state-2) = %d, index_3(7) = %d, dim_state - 2 (%d-2) = %d\n", index_3(dim_state, dim_state-2, dim_state - 2), index_3(dim_state, 7, 7), dim_state, dim_state-2);
 	//printf("Матрица q\n");
 	//print2dMatr(q, dim_state, dim_state);
 	#else // вектор состояния 3
@@ -434,10 +434,11 @@ int main(int argc, char *argv[])
 				MulMatrD(Cib, gravity, ErrAcc,3,3,1); //здесь ErrAcc как временная матрица, а Cib=(Cbn)^t в начальный момент времени
 				for (int iii=0; iii<3; ++iii)
 					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
-#if 0
+#if 1
 				//начальные значения ошибок ориентации (для вектора состояния)
-				x0[2] = -1e-4/g;
-				x0[3] = 1e-4/g;
+				x0[4] = -MeanAb[1]/g;//1e-4/g;
+				x0[5] = MeanAb[0]/g;//-1e-4/g;
+				x0[6] = 2.42407e-07 / (U*cos(phi0));//-(MeanOmb[0])/(U*cos(phi0));//azimuth misalignment
 #endif
 
 			}
@@ -468,7 +469,14 @@ int main(int argc, char *argv[])
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
 		++cur_time;
-
+		#if 0
+		for (int iii=0; iii<3; ++iii)
+		{
+			for (int jjj=0; jjj<3; jjj++)
+				printf("%.10f\t", Cbn[index_3(3, iii, jjj)]);
+			printf("\n");
+		}
+		#endif
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
@@ -594,7 +602,17 @@ int main(int argc, char *argv[])
 				ErrVins[iii] = V[iii-2] - Vgps[iii-2]; //разница ошибок скоростей ИНС и СНС
 			filter.Predict();
 			filter.Update(ErrVins);
+		#if 0
+			printf("v:\n");
+			filter.Print2dMatr(filter.v, filter.getDimZ(), 1);
+			printf("x:\n");
+			filter.Print2dMatr(filter.x, filter.getDimX(), 1);
+			printf("C:\n");
+			filter.Print2dMatr(filter.C, filter.getDimZ(), filter.getDimZ());
+			printf("K:\n");
+			filter.Print2dMatr(filter.K, filter.getDimX(), filter.getDimZ());
 			// printf("omega_x = %.8f \t omega_y = %.8f\n", filter.x[5], filter.x[6]);
+		#endif
 
 		#if 0
 			for (int iii=0; iii<2; ++iii)

@@ -21,16 +21,16 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["errVe"], round), label="Ve");
-fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{Ve}$");
+fig1_ax1.plot(time, np.round(data["errVe"], round), label="$\Delta$ Ve");
+fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["errVn"],round), label="Vn");
-fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{Vn}$");
+fig1_ax2.plot(time, np.round(data["errVn"],round), label="$\Delta$ Vn");
+fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
 
@@ -92,11 +92,13 @@ fig3.suptitle("Оценка скоростей дрейфов гироскопо
 fig3_ax1.set_title("Оценка скоростей дрейфа гироскопа канала X")
 fig3_ax1.set_xlabel("Мин")
 fig3_ax1.set_ylabel("Град/час")
+'''
 fig3_ax1.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель, body")
 fig3_ax1.axhline(y = 0.05*np.cos(np.deg2rad(50)) + 0.05*np.sin(np.deg2rad(50)), xmin=0, color = "#db0db9", linestyle = "-.", label = "Модель, psi = 50$\circ$")
 fig3_ax1.axhline(y = -0.05*np.sin(np.deg2rad(50)) + 0.05*np.cos(np.deg2rad(50)), xmin=0, color = "#db0db9",  linestyle = "-.", label = "Модель, psi = 50$\circ$")
 fig3_ax1.axhline(y = 0.05*np.cos(np.deg2rad(50+90)) + 0.05*np.sin(np.deg2rad(50+90)), xmin=0, color = "#0ddb60", linestyle = "--", label = "Модель, psi = 140$\circ$")
 fig3_ax1.axhline(y = -0.05*np.sin(np.deg2rad(50+90)) + 0.05*np.cos(np.deg2rad(50+90)), xmin=0, color = "#0ddb60",  linestyle = "--", label = "Модель, psi = 140$\circ$")
+'''
 fig3_ax1.plot(time, np.round(np.rad2deg(estimations["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
@@ -107,11 +109,13 @@ fig3_ax1.legend(loc="best")
 fig3_ax2.set_title("Оценка скоростей дрейфа гироскопа канала Y")
 fig3_ax2.set_xlabel("Мин")
 fig3_ax2.set_ylabel("Град/час")
+'''
 fig3_ax2.axhline(y = 0.05, xmin=0, color = "#FF0000", label = "Модель, body")
 fig3_ax2.axhline(y = 0.05*np.cos(np.deg2rad(50)) + 0.05*np.sin(np.deg2rad(50)), xmin=0, color = "#db0db9", linestyle = "-.", label = "Модель, psi = 50$\circ$")
 fig3_ax2.axhline(y = -0.05*np.sin(np.deg2rad(50)) + 0.05*np.cos(np.deg2rad(50)), xmin=0, color = "#db0db9",  linestyle = "-.", label = "Модель, psi = 50$\circ$")
 fig3_ax2.axhline(y = 0.05*np.cos(np.deg2rad(50+90)) + 0.05*np.sin(np.deg2rad(50+90)), xmin=0, color = "#0ddb60", linestyle = "--", label = "Модель, psi = 140$\circ$")
 fig3_ax2.axhline(y = -0.05*np.sin(np.deg2rad(50+90)) + 0.05*np.cos(np.deg2rad(50+90)), xmin=0, color = "#0ddb60",  linestyle = "--", label = "Модель, psi = 140$\circ$")
+'''
 fig3_ax2.plot(time, np.round(np.rad2deg(estimations["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
@@ -119,6 +123,10 @@ fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\ome
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
 
+
+plt.show()
+
+exit();
 
 '''Оценки ориентации'''
 fig10, (fig10_ax1, fig10_ax2) = plt.subplots(2, 1)
@@ -137,9 +145,7 @@ fig10_ax2.plot(time, np.round(np.rad2deg(estimations["Phi_n"])*60,round), label=
 fig10_ax2.legend(loc="best")
 fig10_ax2.grid(True)
 
-plt.show()
 
-exit();
 
 '''Ошибки по координатам'''
 fig4, (fig4_ax1, fig4_ax2) = plt.subplots(1, 2)

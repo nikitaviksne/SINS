@@ -158,6 +158,7 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	matMul(getDimX(), getDimX(), getDimZ(), Papr, H_t, Papr_H_t);
 
 #ifdef dev
+// #if 1
 	printf("Papr_H_t:\n");
 	Print2dMatr(Papr_H_t, getDimX(), getDimZ());
 #endif
@@ -197,16 +198,21 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 		H_Papr_H_tR[iii] = H_Papr_H_t[iii] + R[iii];
 
 #ifdef dev
+// #if 1
 	printf("H_Papr_H_tR:\n");
 	Print2dMatr(H_Papr_H_tR, getDimZ(), getDimZ());
 #endif	
 
-	alglib::real_2d_array invHPR; //обратная матрица к H_Papr_H_tR; 2D потому что библиотечная функция
+	alglib::real_2d_array invHPR; //обратная матрица к H_Papr_H_tR; 2D потому что либо библиотечная функция так считает, либо сингулярка, которая тоже использует библиотечные функции умножения
+	alglib::real_2d_array HPR; //обратная матрица к H_Papr_H_tR; 2D потому что либо библиотечная функция так считает, либо сингулярка, которая тоже использует библиотечные функции умножения
 	invHPR.setlength(getDimZ(), getDimZ());
+	HPR.setlength(getDimZ(), getDimZ());
 	//делаем копию
 	for (int iii=0; iii<getDimZ(); ++iii)
 		for (int jjj=0; jjj<getDimZ(); ++jjj)
-			invHPR[iii][jjj] = H_Papr_H_tR[index_3(getDimZ(), iii, jjj)];
+			HPR[iii][jjj] = H_Papr_H_tR[index_3(getDimZ(), iii, jjj)];
+
+	#if 0
 	try
 	{
 		alglib::matinvreport rep; // по примеру
@@ -217,6 +223,9 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 		printf("ALGLIB exception with message '%s'\n", alglib_exception.msg.c_str());
 		return ;
 	}
+	#else
+	pinv(HPR, invHPR);
+	#endif
 	//Переписываем 2D в 1D
 	alglib::real_1d_array inv_H_P_H_t;
 	inv_H_P_H_t.setlength(getDimZ()*getDimZ());
@@ -225,7 +234,8 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 			inv_H_P_H_t[index_3(getDimZ(), iii, jjj)] = invHPR[iii][jjj];
 	
 #ifdef dev
-	printf("inv_H_P_H_t:\n");
+// #if 1
+	printf("inv_H_P_H_t after inverse:\n");
 	Print2dMatr(inv_H_P_H_t, getDimZ(), getDimZ());
 #endif
 	

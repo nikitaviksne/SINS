@@ -48,7 +48,7 @@ C_b_n = np.array([[],
                   []])
 '''
 
-Vabs = 30 # модуль конечной линейной скорости, м/с
+Vabs = 0 # модуль конечной линейной скорости, м/с
 phi0 = np.deg2rad(55)
 lmbda0 = np.deg2rad(33)
 
@@ -62,16 +62,17 @@ om_turn = - angle_turn / (time_to_turn ) #угловая скорость пов
 extention_out_file = "csv" # bin (для бинарного) или csv (для текстового)
 
 '''задаем ориентацию объекта'''
-heading0 = np.deg2rad(90)
+heading0 = np.deg2rad(0)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
-file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_freq_{freq}_turn_V_coo_gps.{extention_out_file}"
+file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_R_{int(np.rad2deg(roll))}_P_{int(np.rad2deg(pitch))}_freq_{freq}_turn_V_coo_gps.{extention_out_file}"
+dest_dir = "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/" #дериктория назначения
 C_n_b = matrix_o_b(heading0, roll, pitch)
 
 '''Систематические дрейфы'''
 bias_acc = 1e-4;
-bias_gyr = np.deg2rad(0.01)/3600;
+bias_gyr = np.deg2rad(0.05)/3600;
 '''Случайные дрейфы'''
 T_k_a = 1
 beta_acc = 1/T_k_a
@@ -132,7 +133,7 @@ if (extention_out_file == "bin"):
     type_open_file = "wb"
 else:# в любом случае, чтобы создался файл и данные записались
     type_open_file = "wt" 
-with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", type_open_file) as file):
+with (open(dest_dir + file_name, type_open_file) as file):
         '''
         последовательность данных
         Abx Aby Abz Ombx Omby Omz biasAbx biasAby biasAbz biasOmbx biasOmby biasOmbz randAbx randAby randAbz randOmbx randOmby randOmbz Vgps_x Vgps_y randVgps_x randVgps_y, phi_gps, lambda_gps, randPhi_gps, randLambda_gps
@@ -161,7 +162,7 @@ with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", typ
                 Только в случае с инерциальной навигацией "относительная" должна пониматься как относительная относительно
                 инерциального пространства
                 '''
-                Coriolise = np.cross(Om_e + dOm_or, np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
+                Coriolise = np.cross(2*Om_e + dOm_or, np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
             else:
                 dA = np.zeros(3)
                 dOm_or = np.zeros(3) # r -- realtive (относительная)
@@ -208,4 +209,4 @@ with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", typ
                 file.write(data); # запись этой структуры в файл
                 
         
-print("Generation done")
+print(f"Generation done: {dest_dir + file_name}")

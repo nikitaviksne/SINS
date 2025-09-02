@@ -69,7 +69,7 @@ Ldoub quaternion::norma()
 void quaternion::normalize(Ldoub limit)
 {
 	Ldoub norma (this->norma());
-	if ( (1 - norma) > limit)
+	if ( abs(1 - norma) > limit)
 	{
 		this->w *= ((1 + norma/2.));
 		this->x *= ((1 + norma/2.));

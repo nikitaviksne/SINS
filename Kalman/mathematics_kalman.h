@@ -15,4 +15,8 @@ void transpose(int, alglib::real_1d_array, alglib::real_1d_array& ); //для к
 
 void transpose(int, int, alglib::real_1d_array, alglib::real_1d_array& ); //для прямоугольных матриц
 
+void pinv(alglib::real_2d_array , alglib::real_2d_array& );
+
+void diag(alglib::real_1d_array, alglib::real_2d_array&);
+
 #endif //MATHEMATICS_H
