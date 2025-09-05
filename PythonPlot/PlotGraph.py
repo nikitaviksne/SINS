@@ -123,6 +123,14 @@ fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\ome
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
 
+fig20, (fig20_ax1) = plt.subplots(ncols=1, nrows=1)
+fig20.suptitle("Скорости ИНС")
+fig20_ax1.plot(time, np.round(data["Ve"], round), label = "Ve")
+fig20_ax1.plot(time, np.round(data["Vn"], round), label = "Vn")
+fig20_ax1.set_xlabel("Мин")
+fig20_ax1.set_ylabel("м/с")
+fig20_ax1.grid(True)
+fig20_ax1.legend(loc="best")
 
 plt.show()
 

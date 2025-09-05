@@ -53,16 +53,17 @@ phi0 = np.deg2rad(55)
 lmbda0 = np.deg2rad(33)
 
 time_to_turn = 5*60 # время в сек на разворот
-time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота в тактах (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
+time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
 time_stop_turn = (t_nav + time_to_alignment)//2 + time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) окончания поворота 
-angle_turn = np.deg2rad(0) # угол разворота, в рад
+angle_turn = np.deg2rad(10) # угол разворота, в рад
 om_turn = - angle_turn / (time_to_turn ) #угловая скорость поворота в проекции на местную вертикаль (положительное мзменение курса по часовой, следовательно угловая скрость отрицательная), рад/с
+Om_turn = np.zeros(3); Om_turn[2] = om_turn; # массив угшловых скоростей разворота
 
 '''тип файлы, бинарный или текстовый'''
 extention_out_file = "csv" # bin (для бинарного) или csv (для текстового)
 
 '''задаем ориентацию объекта'''
-heading0 = np.deg2rad(0)
+heading0 = np.deg2rad(50)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
@@ -136,7 +137,7 @@ else:# в любом случае, чтобы создался файл и да�
 with (open(dest_dir + file_name, type_open_file) as file):
         '''
         последовательность данных
-        Abx Aby Abz Ombx Omby Omz biasAbx biasAby biasAbz biasOmbx biasOmby biasOmbz randAbx randAby randAbz randOmbx randOmby randOmbz Vgps_x Vgps_y randVgps_x randVgps_y, phi_gps, lambda_gps, randPhi_gps, randLambda_gps
+        ["Abx", "Aby", "Abz", "Ombx", "Omby", "Ombz", "biasAbx", "biasAby", "biasAbz", "biasOmbx", "biasOmby", "biasOmbz", "randAbx", "randAby", "randAbz", "randOmbx", "randOmby", "randOmbz", "Vgps_x", "Vgps_y", "randVgps_x", "randVgps_y", "phi_gps", "lambda_gps", "randPhi_gps", "randLambda_gps"]
         '''
         if (extention_out_file == "bin"):
             s = struct.Struct("<26d");
@@ -162,13 +163,18 @@ with (open(dest_dir + file_name, type_open_file) as file):
                 Только в случае с инерциальной навигацией "относительная" должна пониматься как относительная относительно
                 инерциального пространства
                 '''
-                Coriolise = np.cross(2*Om_e + dOm_or, np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
+                if ( (itr >= (time_to_alignment + time_start_turn) * freq) and (itr <= (time_to_alignment + time_stop_turn) * freq) ):
+                    allow_turn = True;
+                else:
+                    allow_turn = False;
+                Coriolise = np.cross(2*(Om_e + dOm_or + allow_turn * Om_turn), np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
             else:
+                allow_turn = False; 
                 dA = np.zeros(3)
                 dOm_or = np.zeros(3) # r -- realtive (относительная)
                 Coriolise = np.zeros(3);
 
-            Om_b = C_n_b @ (Om_e + dOm_or);
+            Om_b = C_n_b @ (Om_e + dOm_or + allow_turn * Om_turn);
             A_b = C_n_b @ (A_o + dA + Coriolise);
             if (extention_out_file == "csv"):
                 '''Запись в файл в текстовом виде'''

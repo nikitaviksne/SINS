@@ -7,13 +7,16 @@
 
 // #define dev
 
-AdaptiveKalman::AdaptiveKalman(int dimx, int dimz)
+AdaptiveKalman::AdaptiveKalman(int dimx, int dimz, Ldoub h)
 {
 	setDimX(dimx);
 	setDimZ(dimz);
+	this->h = h;
 
 	Papr.setlength(dim_x * dim_x);
 	A.setlength(dim_x * dim_x);
+	A2.setlength(dim_x * dim_x);
+	A3.setlength(dim_x * dim_x);
 	Phi.setlength(dim_x * dim_x);
 	#if 0
 	Phi[index_3(dim_x, 0, 0)] = 1;	Phi[index_3(dim_x, 0, 1)] = 1;
@@ -94,6 +97,10 @@ void AdaptiveKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 }
 void AdaptiveKalman::Predict()
 {
+	matMul(getDimX(), getDimX(), getDimX(), A, A, A2);
+	matMul(getDimX(), getDimX(), getDimX(), A, A, A3);
+	for (int iii =0; iii < getDimX()*getDimX(); ++iii) //вычисляю матрицу перехода Phi
+		Phi[iii] = I[iii] + A[iii] * h + A2[iii] * pow(h,2) / 2. + A3[iii] * pow(h, 3) / 6.; //не забываем умножить на такт интегрирования
 	matMul(getDimX(), getDimX(), 1, Phi, x, x_1); //предсказываем вектор состояния x_1  = Phi @ x
 
 	/*предсказываем априорную ошибку оценивания (используя апостериорную и ковариацию входного шума)*/
