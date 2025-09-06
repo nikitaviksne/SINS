@@ -9,7 +9,7 @@ set(SRCS
 
 set(SOURCE_LIB
     include/
-	/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/
+	/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/
     )
 
 add_library(lclib STATIC ${SRCS})
@@ -52,14 +52,14 @@ target_include_directories(ins PUBLIC ${Headers_SINS})
 
 #добавляем библиотеку alglib, как статическую
 set(SOURCE_ALGLIB
-		/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/
+		/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/
     )
 
 add_library(alglib STATIC 
-		/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/linalg.cpp
-    	/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/ap.cpp
-    	/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/alglibinternal.cpp
-    	/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/alglibmisc.cpp
+		/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/linalg.cpp
+    	/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/ap.cpp
+    	/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/alglibinternal.cpp
+    	/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/alglibmisc.cpp
 	)
 target_include_directories(alglib PUBLIC ${SOURCE_ALGLIB})# указываем заголовочные файлы
 
@@ -68,7 +68,7 @@ target_include_directories(alglib PUBLIC ${SOURCE_ALGLIB})# указываем �
 set(Headers_Kalman
 		Kalman/
 		include/
-		/home/nikita_viksne/Документы/CLibraries/alglib-cpp-v4.04.0/src/		
+		/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/		
 	)
 set(Source_Kalman 
 		Kalman/AdaptiveKalman.cpp

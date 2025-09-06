@@ -415,10 +415,10 @@ int main(int argc, char *argv[])
 				MulMatrD(Cib, gravity, ErrAcc,3,3,1); //здесь ErrAcc как временная матрица, а Cib=(Cbn)^t в начальный момент времени
 				for (int iii=0; iii<3; ++iii)
 					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
-#if 0
+#if 1
 				//начальные значения ошибок ориентации (для вектора состояния)
-				x0[2] = -1e-4/g;
-				x0[3] = 1e-4/g;
+				x0[2] = ;
+				x0[3] = ;
 #endif
 
 			}
