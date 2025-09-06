@@ -53,10 +53,11 @@ phi0 = np.deg2rad(55)
 lmbda0 = np.deg2rad(33)
 
 time_to_turn = 5*60 # время в сек на разворот
-time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота в тактах (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
+time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
 time_stop_turn = (t_nav + time_to_alignment)//2 + time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) окончания поворота 
-angle_turn = np.deg2rad(90) # угол разворота, в рад
+angle_turn = np.deg2rad(10) # угол разворота, в рад
 om_turn = - angle_turn / (time_to_turn ) #угловая скорость поворота в проекции на местную вертикаль (положительное мзменение курса по часовой, следовательно угловая скрость отрицательная), рад/с
+Om_turn = np.zeros(3); Om_turn[2] = om_turn; # массив угшловых скоростей разворота
 
 '''тип файлы, бинарный или текстовый'''
 extention_out_file = "csv" # bin (для бинарного) или csv (для текстового)
@@ -66,12 +67,13 @@ heading0 = np.deg2rad(50)
 roll = np.deg2rad(0);
 pitch = np.deg2rad(0);
 
-file_name = f"data_acc_veloc_{Vabs}_heading0_{int(np.rad2deg(heading0))}_freq_400_turn_V_coo_gps.{extention_out_file}"
+file_name = f"data_acc_veloc_{Vabs}_heading_{int(np.rad2deg(heading0))}_R_{int(np.rad2deg(roll))}_P_{int(np.rad2deg(pitch))}_freq_{freq}_turn_V_coo_gps.{extention_out_file}"
+dest_dir = "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/" #дериктория назначения
 C_n_b = matrix_o_b(heading0, roll, pitch)
 
 '''Систематические дрейфы'''
 bias_acc = 1e-4;
-bias_gyr = np.deg2rad(0.01)/3600;
+bias_gyr = np.deg2rad(0.05)/3600;
 '''Случайные дрейфы'''
 T_k_a = 1
 beta_acc = 1/T_k_a
@@ -132,10 +134,10 @@ if (extention_out_file == "bin"):
     type_open_file = "wb"
 else:# в любом случае, чтобы создался файл и данные записались
     type_open_file = "wt" 
-with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", type_open_file) as file):
+with (open(dest_dir + file_name, type_open_file) as file):
         '''
         последовательность данных
-        Abx Aby Abz Ombx Omby Omz biasAbx biasAby biasAbz biasOmbx biasOmby biasOmbz randAbx randAby randAbz randOmbx randOmby randOmbz Vgps_x Vgps_y randVgps_x randVgps_y, phi_gps, lambda_gps, randPhi_gps, randLambda_gps
+        ["Abx", "Aby", "Abz", "Ombx", "Omby", "Ombz", "biasAbx", "biasAby", "biasAbz", "biasOmbx", "biasOmby", "biasOmbz", "randAbx", "randAby", "randAbz", "randOmbx", "randOmby", "randOmbz", "Vgps_x", "Vgps_y", "randVgps_x", "randVgps_y", "phi_gps", "lambda_gps", "randPhi_gps", "randLambda_gps"]
         '''
         if (extention_out_file == "bin"):
             s = struct.Struct("<26d");
@@ -161,13 +163,18 @@ with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", typ
                 Только в случае с инерциальной навигацией "относительная" должна пониматься как относительная относительно
                 инерциального пространства
                 '''
-                Coriolise = np.cross(Om_e + dOm_or, np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
+                if ( (itr >= (time_to_alignment + time_start_turn) * freq) and (itr <= (time_to_alignment + time_stop_turn) * freq) ):
+                    allow_turn = True;
+                else:
+                    allow_turn = False;
+                Coriolise = np.cross(2*(Om_e + dOm_or + allow_turn * Om_turn), np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
             else:
+                allow_turn = False; 
                 dA = np.zeros(3)
                 dOm_or = np.zeros(3) # r -- realtive (относительная)
                 Coriolise = np.zeros(3);
 
-            Om_b = C_n_b @ (Om_e + dOm_or);
+            Om_b = C_n_b @ (Om_e + dOm_or + allow_turn * Om_turn);
             A_b = C_n_b @ (A_o + dA + Coriolise);
             if (extention_out_file == "csv"):
                 '''Запись в файл в текстовом виде'''
@@ -208,13 +215,4 @@ with (open(f"/home/nikita_viksne/InertialNavigation/Data_files/{file_name}", typ
                 file.write(data); # запись этой структуры в файл
                 
         
-print("Generation done")
-
-fig1, (fig1_ax1, fig1_ax2) = plt.subplots(2, 1)
-fig1_ax1.plot(Ve)
-fig1_ax2.plot(Vn)
-
-fig10, (fig10_ax1) = plt.subplots(1, 1)
-fig10_ax1.plot(np.rad2deg(heading))
-
-plt.show()
+print(f"Generation done: {dest_dir + file_name}")

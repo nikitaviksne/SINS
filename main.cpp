@@ -417,8 +417,9 @@ int main(int argc, char *argv[])
 					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
 #if 1
 				//начальные значения ошибок ориентации (для вектора состояния)
-				x0[2] = ;
-				x0[3] = ;
+				x0[4] = -MeanAb[1]/g;
+				x0[5] = MeanAb[0]/g;
+				x0[6] = 2.42407e-7 / (U*cos(phi0)); // 
 #endif
 
 			}
@@ -659,6 +660,8 @@ int main(int argc, char *argv[])
 			// Шапка
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
+			fprintf(navig_res, "Vgps_e;");
+			fprintf(navig_res, "Vgps_n;");
 			fprintf(navig_res, "errVe;");
 			fprintf(navig_res, "errVn;");
 			fprintf(navig_res, "Phi;");
@@ -680,6 +683,9 @@ int main(int argc, char *argv[])
 			// Скорости
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", V[i]);
+			//Скорости GPS каак эталон (возможно с погрешностями)
+			for (int iii=0; iii<2; ++iii)
+				fprintf(navig_res, "%.10e;", Vgps[iii]);
 			//Ошибки по скорости
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", Err_V[i]);

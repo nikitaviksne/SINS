@@ -21,16 +21,16 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["errVe"], round), label="Ve");
-fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{Ve}$");
+fig1_ax1.plot(time, np.round(data["errVe"], round), label="$\Delta$Ve");
+fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["errVn"],round), label="Vn");
-fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{Vn}$");
+fig1_ax2.plot(time, np.round(data["errVn"],round), label="$\Delta$Vn");
+fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
 
@@ -119,7 +119,25 @@ fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\ome
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
 
+fig20, (fig20_ax1, fig20_ax2) = plt.subplots(ncols=1, nrows=2)
+fig20.suptitle("Скорости алгоритма ИНС")
+fig20_ax1.plot(time, data["Ve"], label = "Ve")
+fig20_ax1.plot(time, data["Vgps_e"], label = "Vgps_e")
+fig20_ax1.legend(loc = "best")
+fig20_ax1.grid(True)
+fig20_ax1.set_xlabel("Мин")
+fig20_ax1.set_ylabel("м/с")
+# 
+fig20_ax2.plot(time, data["Vn"], label = "Vn")
+fig20_ax2.plot(time, data["Vgps_n"], label = "Vgps_n")
+fig20_ax2.legend(loc = "best")
+fig20_ax2.grid(True)
+fig20_ax2.set_xlabel("Мин")
+fig20_ax2.set_ylabel("м/с")
 
+plt.show()
+
+exit(0)
 '''Оценки ориентации'''
 fig10, (fig10_ax1, fig10_ax2) = plt.subplots(2, 1)
 # Угол Phi_x
@@ -136,6 +154,7 @@ fig10_ax2.set_ylabel("Угл. мин")
 fig10_ax2.plot(time, np.round(np.rad2deg(estimations["Phi_n"])*60,round), label="$\hat{\Phi_n}$");
 fig10_ax2.legend(loc="best")
 fig10_ax2.grid(True)
+
 
 plt.show()
 
