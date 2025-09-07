@@ -21,7 +21,7 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["errVe"], round), label="$\Delta$Ve");
+fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$Ve");
 fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
@@ -29,7 +29,7 @@ fig1_ax1.grid(True)
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["errVn"],round), label="$\Delta$Vn");
+fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)

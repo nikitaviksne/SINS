@@ -513,6 +513,10 @@ int main(int argc, char *argv[])
 		Ldoub omo[3] = { 0 }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
 		SolveOrient(alpha, Cib, Cin, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 
+		//Пересчитываем "идеальные" скорости (не совсем идеальные, потому что неоткуда взять идеальный угол курса, берем его из решения задачи ориентации, уже с ошибками)
+		V0[0] = (Ldoub) Vabs*sin(Orientation[0]);
+		V0[1] = (Ldoub) Vabs*cos(Orientation[1]);
+
 		/*Решение задачи навигации*/
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
 		// инкремент тактов
@@ -662,8 +666,6 @@ int main(int argc, char *argv[])
 			fprintf(navig_res, "Vn;");
 			fprintf(navig_res, "Vgps_e;");
 			fprintf(navig_res, "Vgps_n;");
-			fprintf(navig_res, "errVe;");
-			fprintf(navig_res, "errVn;");
 			fprintf(navig_res, "Phi;");
 			fprintf(navig_res, "Lambda;");
 			fprintf(navig_res, "Height;");
@@ -686,9 +688,6 @@ int main(int argc, char *argv[])
 			//Скорости GPS каак эталон (возможно с погрешностями)
 			for (int iii=0; iii<2; ++iii)
 				fprintf(navig_res, "%.10e;", Vgps[iii]);
-			//Ошибки по скорости
-			for(int i=0; i<2; ++i)
-				fprintf(navig_res, "%.10e;", Err_V[i]);
 			// Координаты
 			for(int i=0; i<3; ++i)
 				fprintf(navig_res, "%.10e;", Coordinates[i]);

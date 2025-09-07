@@ -162,7 +162,7 @@ with (open(dest_dir + file_name, type_open_file) as file):
                 Только в случае с инерциальной навигацией "относительная" должна пониматься как относительная относительно
                 инерциального пространства
                 '''
-                if ( (itr >= (time_to_alignment + time_start_turn) * freq) and (itr <= (time_to_alignment + time_stop_turn) * freq) ):
+                if ( (itr >= (time_start_turn) * freq) and (itr <= (time_stop_turn) * freq) ):
                     allow_turn = True;
                     C_n_b = matrix_o_b(heading[itr], roll, pitch);
                 else:
