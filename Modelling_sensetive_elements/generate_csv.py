@@ -48,14 +48,14 @@ C_b_n = np.array([[],
                   []])
 '''
 
-Vabs = 30 # модуль конечной линейной скорости, м/с
+Vabs = 0 # модуль конечной линейной скорости, м/с
 phi0 = np.deg2rad(55)
 lmbda0 = np.deg2rad(33)
 
 time_to_turn = 5*60 # время в сек на разворот
 time_start_turn = (t_nav + time_to_alignment)//2 - time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) начала поворота (time_to_alihnment+ (t_nav - time_to_alignemrnt)/2)
 time_stop_turn = (t_nav + time_to_alignment)//2 + time_to_turn // 2# время в сек (от подачи питания, т.е начала выставки) окончания поворота 
-angle_turn = np.deg2rad(10) # угол разворота, в рад
+angle_turn = np.deg2rad(90) # угол разворота, в рад
 om_turn = - angle_turn / (time_to_turn ) #угловая скорость поворота в проекции на местную вертикаль (положительное мзменение курса по часовой, следовательно угловая скрость отрицательная), рад/с
 Om_turn = np.zeros(3); Om_turn[2] = om_turn; # массив угшловых скоростей разворота
 
@@ -128,7 +128,6 @@ for iii in range(1, num_samples): # цикл от 1 (практически с �
     phi.append(phi[-1] + Vn[iii]/(Re + Height[iii])/freq)
     lmbda.append(lmbda[-1] + Ve[iii]/((Re + Height[iii])*np.cos(phi[-1]))/freq)
 
-
 round = 12; # количество знаков после запятой, с какой округлять и выводить в файл
 if (extention_out_file == "bin"):
     type_open_file = "wb"
@@ -165,6 +164,7 @@ with (open(dest_dir + file_name, type_open_file) as file):
                 '''
                 if ( (itr >= (time_to_alignment + time_start_turn) * freq) and (itr <= (time_to_alignment + time_stop_turn) * freq) ):
                     allow_turn = True;
+                    C_n_b = matrix_o_b(heading[itr], roll, pitch);
                 else:
                     allow_turn = False;
                 Coriolise = np.cross(2*(Om_e + dOm_or + allow_turn * Om_turn), np.array([Ve[itr], Vn[itr], 0])); #+  np.cross(Om_e, np.array([Ve[itr], Vn[itr], 0])) 
