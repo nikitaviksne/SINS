@@ -21,7 +21,7 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["errVe"], round), label="$\Delta$ Ve");
+fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$ Ve");
 fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
@@ -29,7 +29,7 @@ fig1_ax1.grid(True)
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["errVn"],round), label="$\Delta$ Vn");
+fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
@@ -131,6 +131,25 @@ fig20_ax1.set_xlabel("Мин")
 fig20_ax1.set_ylabel("м/с")
 fig20_ax1.grid(True)
 fig20_ax1.legend(loc="best")
+
+'''Малые приращения линейных скоростей'''
+fig25, (fig25_ax1, fig25_ax2) = plt.subplots(1, 2)
+# Восточная составляющая
+fig25.suptitle("Малые приращения скоростей")
+fig25_ax1.set_title("Малые приращения восточной скорости");
+fig25_ax1.set_xlabel("мин")
+fig25_ax1.set_ylabel("м/с")
+fig25_ax1.plot(time, np.round(data["Woe"], round), label="Woe");
+fig25_ax1.legend(loc="best")
+fig25_ax1.grid(True)
+# Северная составляющая
+fig25_ax2.set_title("Малые приращения северной скорости");
+fig25_ax2.set_xlabel("мин")
+fig25_ax2.set_ylabel("м/с")
+fig25_ax2.plot(time, np.round(data["Won"],round), label="Won");
+fig25_ax2.legend(loc="best")
+fig25_ax2.grid(True)
+
 
 plt.show()
 

@@ -631,6 +631,8 @@ int main(int argc, char *argv[])
 		{
 			navig_res=fopen("./data/Nav_res.csv","wt");
 			// Шапка
+			fprintf(navig_res, "Woe;");
+			fprintf(navig_res, "Won;");
 			fprintf(navig_res, "Ve;");
 			fprintf(navig_res, "Vn;");
 			fprintf(navig_res, "errVe;");
@@ -651,6 +653,9 @@ int main(int argc, char *argv[])
 		if(navig_res)
 		{
 			// Навигационные параметры
+			// Малые приращения скоростей
+			for(int i=0; i<2; ++i)
+				fprintf(navig_res, "%.10e;", Wo[i]);
 			// Скорости
 			for(int i=0; i<2; ++i)
 				fprintf(navig_res, "%.10e;", V[i]);
