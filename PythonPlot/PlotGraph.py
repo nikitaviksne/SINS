@@ -10,7 +10,8 @@ data = pd.read_csv(path_nav_sol, delimiter=";");
 estimations = pd.read_csv(path_est, delimiter=",");
 
 
-time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
+# time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
+time = np.linspace(0, (data.iloc[:, 0].size - 1), data.iloc[:, 0].size) # в тактах
 
 round = 100
 
@@ -150,6 +151,15 @@ fig25_ax2.plot(time, np.round(data["Won"],round), label="Won");
 fig25_ax2.legend(loc="best")
 fig25_ax2.grid(True)
 
+
+'''Траектория'''
+fig35, (fig35_ax1) = plt.subplots(1, 1)
+# Восточное направление
+fig35.suptitle("Траектория")
+fig35_ax1.set_xlabel("град")
+fig35_ax1.set_ylabel("град")
+fig35_ax1.plot(np.round(np.rad2deg(data["Lambda"]), round), np.round(np.rad2deg(data["Phi"]), round) );
+fig35_ax1.grid(True)
 
 plt.show()
 

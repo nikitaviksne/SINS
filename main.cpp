@@ -271,7 +271,6 @@ int main(int argc, char *argv[])
 	Ldoub Ao[3] = {0}; // Ускорения в опорныых осях
 	Ldoub Wo[3] = {0}; //Приращение скоростей в опорных осях
 	Ldoub Omb[3] = {0}; // Угловые скорости в связанных осях
-	Ldoub Omo[3] = {0}; // Угловые скорости в опорных осях
 	//Ldoub Oms[3] = {0}; // угловые скорости от линейного движения + Земля
 	Ldoub MeanAb[3] = {0};
 	Ldoub MeanOmb[3] = {0};
@@ -292,6 +291,9 @@ int main(int argc, char *argv[])
 
 	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
 	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+
+	Ldoub Omo[3] = {-V0[1]/(Rphi + Coordinates[2]), V0[0]/(Rlambda + Coordinates[2]), V0[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0])}; // Угловые скорости в опорных осях
+	Ldoub omo[3] = { Omo[0], Omo[1] +  U*cos(Coordinates[0]), Omo[2] + U*sin(Coordinates[0]) }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
 
 	bool AllowBiasAcc = (bool) (strtod(argv[6], NULL));
 	bool AllowBiasGyr = (bool) (strtod(argv[7], NULL));
@@ -462,14 +464,13 @@ int main(int argc, char *argv[])
 		/*Далее идет 100 Гц такт*/
 		for (int iii=0; iii<3; iii++)
 			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
-		//Решение задачи ориентации
-		Ldoub omo[3] = { 0 }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
-		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
-
-		V0[0] = Vabs*sin(Orientation[0]);
-		V0[1] = Vabs*cos(Orientation[0]);
 		/*Решение задачи навигации*/
 		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
+		//Решение задачи ориентации
+		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
+		//breakpiont: cur_time >= (284996 - 30000)
+		V0[0] = Vabs*sin(Orientation[0]);
+		V0[1] = Vabs*cos(Orientation[0]);
 		// инкремент тактов
 		++cur_time;
 		#if 0
