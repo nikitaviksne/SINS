@@ -1,15 +1,15 @@
-﻿#ifndef ADAPTIVEKALMAN_H
-#define ADAPTIVEKALMAN_H
+﻿#ifndef ADAPTIVERKALMAN_H
+#define ADAPTIVERKALMAN_H
 
 
 #include "ap.h"
 #include "linalg.h"
 #include "std.h"
 
-class AdaptiveKalman
+class AdaptiveRKalman
 {
 public:
-	AdaptiveKalman(int, int, Ldoub h = 1/*такт в секундах, по умолчанию*/);
+	AdaptiveRKalman(int, int, Ldoub h = 1/*такт в секундах, по умолчанию*/);
 	void Init(Ldoub*, Ldoub*, Ldoub* h);
 	void Predict(); // функция предсказания по модели
 	void Update(Ldoub* );// функция обновления, т.е. вычисление оценки вектора по измерениям
@@ -48,4 +48,4 @@ private:
 };
 
 
-#endif //ADAPTIVEKALMAN_H
+#endif //ADAPTIVERKALMAN_H

@@ -1,13 +1,13 @@
 ﻿#include "ap.h"
 #include "linalg.h"
-#include "AdaptiveKalman.h"
+#include "AdaptiveQRKalman.h"
 #include "mathematics_kalman.h"
 #include "std.h"
 #include <stdio.h>
 
 // #define dev
 
-AdaptiveKalman::AdaptiveKalman(int dimx, int dimz, Ldoub h)
+AdaptiveQRKalman::AdaptiveQRKalman(int dimx, int dimz, Ldoub h)
 {
 	setDimX(dimx);
 	setDimZ(dimz);
@@ -17,7 +17,9 @@ AdaptiveKalman::AdaptiveKalman(int dimx, int dimz, Ldoub h)
 	A.setlength(dim_x * dim_x);
 	A2.setlength(dim_x * dim_x);
 	A3.setlength(dim_x * dim_x);
-	Phi.setlength(dim_x * dim_x);
+	Phi.setlength(dim_x * dim_x); // Phi_{k/k-1}
+	Phi12.setlength(dim_x * dim_x); // Phi_{k-1/k-2}
+	Phi2.setlength(dim_x * dim_x); // Phi_{k/k-2}
 	#if 0
 	Phi[index_3(dim_x, 0, 0)] = 1;	Phi[index_3(dim_x, 0, 1)] = 1;
 	Phi[index_3(dim_x, 1, 0)] = 0;	Phi[index_3(dim_x, 1, 1)] = 1;
@@ -35,6 +37,7 @@ AdaptiveKalman::AdaptiveKalman(int dimx, int dimz, Ldoub h)
 	v.setlength(dim_z * 1);
 
 	I.setlength(dim_x * dim_x);
+    
 	for(int ii=0; ii<dim_x; ++ii)
 	{
 		for(int jj=0; jj<dim_x; ++jj)
@@ -75,7 +78,7 @@ AdaptiveKalman::AdaptiveKalman(int dimx, int dimz, Ldoub h)
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
 }
-void AdaptiveKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
+void AdaptiveQRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 {//Инициализация значениями
 
 
@@ -95,7 +98,7 @@ void AdaptiveKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 	//Флаг инициализации
 	init=true;
 }
-void AdaptiveKalman::Predict()
+void AdaptiveQRKalman::Predict()
 {
 	matMul(getDimX(), getDimX(), getDimX(), A, A, A2);
 	matMul(getDimX(), getDimX(), getDimX(), A, A, A3);
@@ -124,7 +127,7 @@ void AdaptiveKalman::Predict()
 
 }
 
-void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-массивы*/)
+void AdaptiveQRKalman::Update(Ldoub* zin/*измерения обычные C-массивы*/)
 {
 	for(int i=0; i< getDimZ(); i++)
 		this->z[i] = zin[i];
@@ -282,24 +285,24 @@ void AdaptiveKalman::Update(Ldoub* zin/*измерения обычные C-ма
 	++iter;
 }
 
-int AdaptiveKalman::getDimX() //функция для получения private размерности
+int AdaptiveQRKalman::getDimX() //функция для получения private размерности
 {
 	return dim_x;
 }
-int AdaptiveKalman::getDimZ() //функция для получения private размерности
+int AdaptiveQRKalman::getDimZ() //функция для получения private размерности
 {
 	return dim_z;
 }
-void AdaptiveKalman::setDimX(int val) //функция для установки private размерности
+void AdaptiveQRKalman::setDimX(int val) //функция для установки private размерности
 {
 	dim_x = val;
 }
-void AdaptiveKalman::setDimZ(int val) //функция для установки private размерности
+void AdaptiveQRKalman::setDimZ(int val) //функция для установки private размерности
 {
 	dim_z = val;
 }
 
-void AdaptiveKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Функция дл вывода на печать матриц
+void AdaptiveQRKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Функция дл вывода на печать матриц
 {
 	for (int iii=0; iii<dim1; ++iii)
 	{

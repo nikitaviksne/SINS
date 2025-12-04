@@ -2,16 +2,32 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys #для приема имени файла для построения через аргумент команды
+import os
+
+def saveFigure(fig, path):
+    if (savefig):
+        #проверяем существование директории, если не существует, создаем
+        if (not os.path.exists(savefig_path_dir)):  
+            os.mkdir(savefig_path_dir)
+        
+        fig.savefig(path)
+
+plt.rcParams['axes.unicode_minus'] = False # чтобы в трассировке курсора присутсвовал знак минус, а не его представление в юникоде \u2112
 
 path_nav_sol = sys.argv[1]
 path_est = sys.argv[2]
+
+savefig = False # не сохраняем графики
+if (len(sys.argv) < 4): #если не указал третим параметром путь сохранения графиков, то оставляем переменную savefig в значении false
+    savefig = True
+    savefig_path_dir = sys.argv[3] # путь к дериктории
 # data =pd.read_csv("~/InertialNavigation/data/"+relative_path, delimiter=";");
 data = pd.read_csv(path_nav_sol, delimiter=";");
 estimations = pd.read_csv(path_est, delimiter=",");
 
 
-# time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
-time = np.linspace(0, (data.iloc[:, 0].size - 1), data.iloc[:, 0].size) # в тактах
+time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
+# time = np.linspace(0, (data.iloc[:, 0].size - 1), data.iloc[:, 0].size) # в тактах
 
 round = 100
 
@@ -34,6 +50,8 @@ fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
+saveFigure(fig1, savefig_path_dir + "Ошибки скоростей.jpg")
+
 
 '''Углы ориентации'''
 fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(3, 1)

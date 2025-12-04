@@ -9,7 +9,7 @@
 #include "alignment.h"
 #include "SolveOrient.h"
 #include "SolveNav.h"
-#include "AdaptiveKalman.h" //Для адаптивного фильтра Калмана
+#include "AdaptiveRKalman.h" //Для адаптивного фильтра Калмана
 #include "UsualKalman.h" //Для обычного фильтра Калмана
 #include "mathematics_kalman.h"
 #define _USE_MATH_DEFINES
@@ -96,7 +96,7 @@ bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool Allo
 	return true;
 }
 
-int Readfile(FILE* is, int numRes /*должное количество считанных данных из файла*/, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, bool AllowRandCoogps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps, Ldoub* CooGps)
+int Readfile(FILE* is, int numRes /*должное количество считанных данных из файла*/, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, bool AllowRandCoogps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps, Ldoub* CooGps, Ldoub* V0 /*всегда идеальные скорости (без погрешностей GPS)*/)
 {
 	Ldoub BiasAb[3] = {0}; // Постоянные погрешности акселерометров
 	Ldoub BiasOmb[3] = {0}; // Постоянные погрешности гироскопов
@@ -105,7 +105,7 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 	Ldoub RandomVgps[2] = {0}; //Случайные погрешности по скоростям GPS
 	Ldoub RandomCoogps[2] = {0}; //Случайные погрешности по координатам GPS
 
-	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &Vgps[0], &Vgps[1], &RandomVgps[0], &RandomVgps[1], &CooGps[0], &CooGps[1], &RandomCoogps[0], &RandomCoogps[1]);
+	int res = fscanf(is, "%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;%lf;\n", &Ab[0], &Ab[1], &Ab[2], &Omb[0], &Omb[1], &Omb[2], &BiasAb[0], &BiasAb[1], &BiasAb[2], &BiasOmb[0], &BiasOmb[1], &BiasOmb[2], &RandAb[0], &RandAb[1], &RandAb[2], &RandOmb[0], &RandOmb[1], 	&RandOmb[2], &V0[0], &V0[1], &RandomVgps[0], &RandomVgps[1], &CooGps[0], &CooGps[1], &RandomCoogps[0], &RandomCoogps[1]);
 	if (res == numRes)
 	{
 		//добавление дрейфов к показаниям инерциальных датчиков
@@ -119,7 +119,7 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		//добавление шума к показаниям СНС
 		for(int iii=0; iii<2; ++iii)
 		{
-			Vgps[iii] += (Ldoub) AllowRandVgps*RandomVgps[iii]; //Скорости
+			Vgps[iii] = V0[iii] + (Ldoub) AllowRandVgps*RandomVgps[iii]; //Скорости
 			CooGps[iii] += (Ldoub) AllowRandCoogps*RandomCoogps[iii]; //Скорости
 		}
 
@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
 	int numRes (26); //количество переменных, котоорое должно быть считано из файла в безошибочном случае
 	FILE* file=fopen(argv[5], "rt");
 	fscanf(file, "%*s;");//чтение строки заголовка, она не нужна, выбрасываем
-	int res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
+	int res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps, V0 /*Всегда идеальные скорости*/);
 #else
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
 	#define FILE_STREAM
@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 	const int dim_state (7+2); //размер вектора состояния (+ координаты GPS)
 	const int dim_sense (2+2); //размер вектора измерения (+ координаты GPS)
 	//*/
-	AdaptiveKalman filter(dim_state, dim_sense, h); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
+	AdaptiveRKalman filter(dim_state, dim_sense, h); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
 			#ifdef FILE_STREAM //если определен файловый поток, то чтение из бинарника, читаем тут
 			ReadFile(in,  AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, Ab, Omb, Vgps); //чтение из бинарного файла данных используемых для выставки
 			#else
-			res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
+			res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps, V0);
 			#endif
 			alignment(Ab, Omb, MeanAb, MeanOmb, StdAb, StdOmb, cur_time, g, U, phi0, Cbn, &Qf);
 			++cur_time; // для 400 Гц
@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
 		if (cur_time == int(70*60/h) )
 			allowCorr = false;
 	#endif
-		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps);
+		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps, V0);
 		/*Далее идет 100 Гц такт*/
 		for (int iii=0; iii<3; iii++)
 			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
@@ -469,8 +469,10 @@ int main(int argc, char *argv[])
 		//Решение задачи ориентации
 		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 		//breakpiont: cur_time >= (284996 - 30000)
-		V0[0] = Vabs*sin(Orientation[0]);
-		V0[1] = Vabs*cos(Orientation[0]);
+		#if 0
+		V0[0] = Vabs*sin(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
+		V0[1] = Vabs*cos(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
+		#endif
 		// инкремент тактов
 		++cur_time;
 		#if 0

@@ -71,7 +71,8 @@ set(Headers_Kalman
 		/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/		
 	)
 set(Source_Kalman 
-		Kalman/AdaptiveKalman.cpp
+		Kalman/AdaptiveRKalman.cpp
+		#Kalman/AdaptiveQRKalman.cpp
 		Kalman/UsualKalman.cpp
 		Kalman/mathematics_kalman.cpp	
 	)
@@ -101,7 +102,8 @@ target_include_directories(quaternions PUBLIC ${Headers_Quaternions})
 #find_package(Qt5Widgets REQUIRED) #Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
 add_executable(main main.cpp)
-
+target_link_directories(main PUBLIC 
+						include/)
 #qt5_use_modules(main Core) ##Выдает ошибку о требовании GLIBCXX_3.4.32 если компилировать вместе с alblib.
 
 target_link_libraries(main 
