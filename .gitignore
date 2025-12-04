@@ -4,9 +4,12 @@ Data_files
 # object files (.o) and output (executible) files (.out)
 *.o*
 # settings vscod
-*.vscode/*
+#*.vscode/*
 # dir tmp, but not /tmp/makefile
 tmp/*
 !./tmp/Makefile
 #dir build
 build/*
+
+#Graphs
+PythonPlot/Images

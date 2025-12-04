@@ -170,3 +170,16 @@ void pinv(alglib::real_2d_array A, alglib::real_2d_array& A_pinv)
 	printf("Exit pinv\n");
 	#endif
 }
+
+
+void print2dmatr(alglib::real_2d_array A)
+{
+	for (int iii=0; iii<A.rows(); iii++)
+	{
+		for (int jjj=0; jjj<A.cols(); jjj++)
+		{
+			printf("%e\t", A[iii][jjj]);
+		}
+		printf("\n");
+	}
+}

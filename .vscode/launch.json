@@ -1,0 +1,57 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug CMake",
+            "type": "cppdbg", // Для отладки C++ кода
+            "request": "launch",
+            "program": "${workspaceFolder}/build/main", // Укажите путь к исполняемому файлу, который создается после сборки. Обычно это имя проекта, указанное в project() в CMakeLists.txt.
+            "args": ["0", "0", "0", "30", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/data_acc_veloc_30_heading_0_R_0_P_0_freq_100_turn_V_coo_gps.csv", "0", "1", "0", "0", "0", "0"], // Аргументы командной строки для программы
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false, // Или true, если хотите отдельную консоль
+            "MIMode": "gdb", // Для Linux. Для Windows с MinGW тоже gdb. Для MSVC - vsdbg.
+            "miDebuggerPath": "/usr/bin/gdb", // Укажите путь к отладчику. Для Windows с MinGW: путь к gdb.exe, например "C:\\MinGW\\bin\\gdb.exe"
+            "setupCommands": [
+                {
+                    "description": "Включить автоматическое форматирование для gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build project", // Задача, которая будет выполнена перед запуском отладки. Убедитесь, что label задачи совпадает.
+            "logging": {
+                "engineLogging": false
+            }
+        },
+        
+        // Конфигурация для отладки Python файла
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "preLaunchTask": "python-pre-launch"
+        },
+
+        // Конфигурация для отладки конкретного Python файла
+        {
+            "name": "Python: PlotGraph",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/PythonPlot/PlotGraph.py",
+            "args": ["data/Nav_res.csv", "data/Kalman_est.csv", "PythonPlot/Images/BiasGyr"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+    ]
+}

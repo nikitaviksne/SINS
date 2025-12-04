@@ -551,7 +551,7 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
 		#if 1
 		//Phi_oz
-		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R*pow(Coordinates[0],2));//; //varphi
+		filter.A[index_3(dim_state, 6, 0)] = U * cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]),2));//; //varphi
 		filter.A[index_3(dim_state, 6, 1)] = 0; //lambda
 		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) tan(Coordinates[0])/(R+Coordinates[2]); //Vox
 		filter.A[index_3(dim_state, 6, 3)] = 0; //Voy

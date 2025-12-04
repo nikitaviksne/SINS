@@ -19,4 +19,6 @@ void pinv(alglib::real_2d_array , alglib::real_2d_array& );
 
 void diag(alglib::real_1d_array, alglib::real_2d_array&);
 
+void print2dmatr(alglib::real_2d_array);
+
 #endif //MATHEMATICS_H

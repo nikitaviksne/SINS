@@ -8,7 +8,7 @@ def saveFigure(fig, path):
     if (savefig):
         #проверяем существование директории, если не существует, создаем
         if (not os.path.exists(savefig_path_dir)):  
-            os.mkdir(savefig_path_dir)
+            os.makedirs(savefig_path_dir, exist_ok=True)
         
         fig.savefig(path)
 
@@ -18,7 +18,7 @@ path_nav_sol = sys.argv[1]
 path_est = sys.argv[2]
 
 savefig = False # не сохраняем графики
-if (len(sys.argv) < 4): #если не указал третим параметром путь сохранения графиков, то оставляем переменную savefig в значении false
+if (len(sys.argv) > 3): #если не указал третим параметром путь сохранения графиков, то оставляем переменную savefig в значении false
     savefig = True
     savefig_path_dir = sys.argv[3] # путь к дериктории
 # data =pd.read_csv("~/InertialNavigation/data/"+relative_path, delimiter=";");
@@ -50,8 +50,7 @@ fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
-saveFigure(fig1, savefig_path_dir + "Ошибки скоростей.jpg")
-
+#fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
 
 '''Углы ориентации'''
 fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(3, 1)
@@ -180,6 +179,11 @@ fig35_ax1.plot(np.round(np.rad2deg(data["Lambda"]), round), np.round(np.rad2deg(
 fig35_ax1.grid(True)
 
 plt.show()
+
+'''производим сохранение всех картинок в полноэкранном формате'''
+saveFigure(fig1, savefig_path_dir + "/Ошибки скоростей.jpg")
+saveFigure(fig2, savefig_path_dir + "/Углы ориентации.jpg")
+saveFigure(fig3, savefig_path_dir + "/Оценки дрейфов гироскопов.jpg")
 
 exit();
 
