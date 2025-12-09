@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys #для приема имени файла для построения через аргумент команды
 import os
@@ -38,16 +40,16 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$ Ve");
 fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
+fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$ Ve");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
 fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");
+fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
 #fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
@@ -59,24 +61,24 @@ fig2.suptitle("Углы")
 fig2_ax1.set_title("Угол курса");
 fig2_ax1.set_xlabel("мин")
 fig2_ax1.set_ylabel("Град.")
-fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"]),round), label="Курс");
 fig2_ax1.plot(time, np.round(np.rad2deg(estimations["d_Psi"]),round), label="$\hat{\Delta\Psi}$");
+fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"]),round), label="Курс");
 fig2_ax1.legend(loc="best")
 fig2_ax1.grid(True)
 # Угол крена
 fig2_ax2.set_title("Угол крена");
 fig2_ax2.set_xlabel("Мин")
 fig2_ax2.set_ylabel("Угл. мин")
-fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="$\gamma$");
 fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\Delta\gamma}$");
+fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="$\gamma$");
 fig2_ax2.legend(loc="best")
 fig2_ax2.grid(True)
 # Угол тангажа
 fig2_ax3.set_title("Угол тангажа");
 fig2_ax3.set_xlabel("Мин")
 fig2_ax3.set_ylabel("Угл. мин")
-fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="$\\theta$");
 fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\Delta\\theta}$");
+fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="$\\theta$");
 fig2_ax3.legend(loc="best")
 fig2_ax3.grid(True)
 

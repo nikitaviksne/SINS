@@ -7,10 +7,11 @@
 
 // #define dev
 
-AdaptiveRKalman::AdaptiveRKalman(int dimx, int dimz, Ldoub h)
+AdaptiveRKalman::AdaptiveRKalman(int dimx, int dimz, int dimq, Ldoub h)
 {
 	setDimX(dimx);
 	setDimZ(dimz);
+	setDimQ(dimq); // установка размера матрицы q
 	this->h = h;
 
 	Papr.setlength(dim_x * dim_x);
@@ -27,7 +28,9 @@ AdaptiveRKalman::AdaptiveRKalman(int dimx, int dimz, Ldoub h)
 
 	x.setlength(dim_x * 1);
 	x_1.setlength(dim_x * 1);
-	Q.setlength(dim_x * dim_x);
+	G.setlength(dim_x*dim_q); // dim_x * dim_q
+	GQGt.setlength(dim_x*dim_x); // dim_x * dim_x
+	Q.setlength(dim_q * dim_q);
 	C.setlength(dim_z * dim_z);
 	R.setlength(dim_z * dim_z);
 	K.setlength(dim_x * dim_z);
@@ -75,7 +78,7 @@ AdaptiveRKalman::AdaptiveRKalman(int dimx, int dimz, Ldoub h)
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
 }
-void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
+void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h/*матрица измерений*/)
 {//Инициализация значениями
 
 
@@ -84,9 +87,10 @@ void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h)
 	{
 		x[iii] = initVal[iii];
 	}
-	for(int iii=0; iii<getDimX(); ++iii)
-		for(int jjj=0; jjj<getDimX(); ++jjj)
-			Q[index_3(dim_x, iii, jjj)] = q[index_3(dim_x, iii, jjj)];
+	for(int iii=0; iii < getDimQ(); ++iii)
+		for(int jjj=0; jjj < getDimQ(); ++jjj)
+			Q[index_3(getDimQ(), iii, jjj)] = q[index_3(getDimQ(), iii, jjj)];
+
 	for (int iii=0; iii<getDimZ(); ++iii)
 		for(int jjj=0; jjj<getDimX(); ++jjj)
 			H[index_3(dim_x, iii, jjj)] = h[index_3(dim_x, iii, jjj)];
@@ -118,9 +122,39 @@ void AdaptiveRKalman::Predict()
 
 	matMul(getDimX(), getDimX(), getDimX(), Phi_Papst, Phi_t, Phi_Papst_Phi_t);
 
-	//Вот тут возможно должна быть матрица входного шума G, но я тогда не понимаю, получается, что тогда измерительный шум один и тот-же?
+#if 0
+	printf("Матрица G\n");
+	Print2dMatr(G, getDimX(), getDimQ());
+#endif
+
+	//Вспомогательная матрица GQ
+	alglib::real_1d_array GQ;
+	GQ.setlength(getDimX()*getDimQ());
+	matMul(getDimX(), getDimQ(), getDimQ(), G, Q, GQ);
+
+#if 0
+	printf("Матрица GQ\n");
+	Print2dMatr(GQ, getDimX(), getDimQ());
+#endif
+	// делаем вспомогательную матрицу Gt = G^T
+	alglib::real_1d_array Gt; 
+	Gt.setlength(getDimQ()*getDimX()); 
+	transpose(getDimX(), getDimQ(), G, Gt);
+
+#if 0
+	printf("Матрица G^t\n");
+	Print2dMatr(Gt, getDimQ(), getDimX());
+#endif
+	//Вычисляем матрицу GQGt
+	matMul(getDimX(), getDimQ(), getDimX(), GQ, Gt, GQGt);
+
+#if 0
+	printf("Матрица QQG^t\n");
+	Print2dMatr(GQGt, getDimX(), getDimX());
+#endif
+
 	for (int iii=0; iii<getDimX()*getDimX(); ++iii)
-		Papr[iii] = Phi_Papst_Phi_t[iii] + Q[iii];
+		Papr[iii] = Phi_Papst_Phi_t[iii] + GQGt[iii];
 
 }
 
@@ -290,6 +324,10 @@ int AdaptiveRKalman::getDimZ() //функция для получения privat
 {
 	return dim_z;
 }
+int AdaptiveRKalman::getDimQ() //функция для получения private размерности
+{
+	return dim_q;
+}
 void AdaptiveRKalman::setDimX(int val) //функция для установки private размерности
 {
 	dim_x = val;
@@ -299,11 +337,16 @@ void AdaptiveRKalman::setDimZ(int val) //функция для установк�
 	dim_z = val;
 }
 
+void AdaptiveRKalman::setDimQ(int val) //функция для установки private размерности
+{
+	dim_q = val;
+}
+
 void AdaptiveRKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Функция дл вывода на печать матриц
 {
 	for (int iii=0; iii<dim1; ++iii)
 	{
-		for (int jjj=0; jjj<dim2; ++jjj) printf("%10.10f ", A[index_3(dim2, iii, jjj)]);
+		for (int jjj=0; jjj<dim2; ++jjj) printf("%e ", A[index_3(dim2, iii, jjj)]);
 		printf("\n");
 	}
 }

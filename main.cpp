@@ -113,9 +113,9 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
 		}
-		Omb[0] += AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0];
-		Omb[1] += AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1];
-		Omb[2] += 0*AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2];
+		Omb[0] += (AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]);
+		Omb[1] += (AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1]);
+		Omb[2] += 0*(AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2]);
 		//добавление шума к показаниям СНС
 		for(int iii=0; iii<2; ++iii)
 		{
@@ -335,8 +335,9 @@ int main(int argc, char *argv[])
 	///*
 	const int dim_state (7+2); //размер вектора состояния (+ координаты GPS)
 	const int dim_sense (2+2); //размер вектора измерения (+ координаты GPS)
+	const int dim_input_noise (2); //размер матрицы входных шумов Q
 	//*/
-	AdaptiveRKalman filter(dim_state, dim_sense, h); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
+	AdaptiveRKalman filter(dim_state, dim_sense, dim_input_noise, h); //Создаю объект фильтра Калмана с матрицей размера 6*6 и измерениями 2*1 (вертикальную скорость не учитываю)
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
@@ -347,9 +348,14 @@ int main(int argc, char *argv[])
 	print2dMatr(H, dim_sense, dim_state);
 
 	//Матрца ковариации входных шумов (модели)
-	Ldoub q[dim_state*dim_state] = {0};
-	q[index_3(dim_state, (dim_state - 2), (dim_state - 2))] = 1e-17 * pow(h, 2); // pow(h, 2) берется если сделать как полагается матрицу G, которая умножается на шаг, и в произведени G @ Q @ G.T получается квадрат шага
-	q[index_3(dim_state, (dim_state - 1), (dim_state - 1))] = 1e-17 * pow(h, 2);
+	Ldoub q[dim_input_noise * dim_input_noise] = {0};
+	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = pow(0.02*deg2rad, 2); 
+	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = pow(0.02*deg2rad, 2);
+	
+	// Заполнение всей матрицы G нулями
+	for (int iii=0; iii<filter.getDimX(); iii++)
+			for(int jjj=0; jjj<filter.getDimQ(); jjj++)
+				filter.G[index_3(filter.getDimQ(), iii, jjj)] = 0;
 	//printf("Для сравнения index_3(dim_state-2) = %d, index_3(7) = %d, dim_state - 2 (%d-2) = %d\n", index_3(dim_state, dim_state-2, dim_state - 2), index_3(dim_state, 7, 7), dim_state, dim_state-2);
 	//printf("Матрица q\n");
 	//print2dMatr(q, dim_state, dim_state);
@@ -437,13 +443,12 @@ int main(int argc, char *argv[])
 				MulMatrD(Cib, gravity, ErrAcc,3,3,1); //здесь ErrAcc как временная матрица, а Cib=(Cbn)^t в начальный момент времени
 				for (int iii=0; iii<3; ++iii)
 					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
-#if 1
+#if 0
 				//начальные значения ошибок ориентации (для вектора состояния)
 				x0[4] = -MeanAb[1]/g;//1e-4/g;
 				x0[5] = MeanAb[0]/g;//-1e-4/g;
 				x0[6] = 2.42407e-07 / (U*cos(phi0));//-(MeanOmb[0])/(U*cos(phi0)) + (ErrAcc[0]/g)*tan(phi0)//2.42407e-07 / (U*cos(phi0));//-(MeanOmb[0])/(U*cos(phi0));//azimuth misalignment
 #endif
-
 			}
 
 		}
@@ -594,6 +599,28 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 2, 1)] = 0; //Phi_N
 		filter.A[index_3(dim_state, 2, 2)] = 0; //d_omega_N
 	#endif
+	#if 0
+		//Phi_x
+		filter.G[index_3(filter.getDimQ(), (4), (0))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, 0);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (4), (1))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, 0);//d_omega_y
+		//Phi_y
+		filter.G[index_3(filter.getDimQ(), (5), (0))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, 0);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (5), (1))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, 0);//d_omega_y
+		//Phi_z
+		filter.G[index_3(filter.getDimQ(), (6), (0))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, 0);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (6), (1))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, 0);//d_omega_y
+	#endif
+		// как было до этого
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, 0);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, 0);//d_omega_y
+		//Phi_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, 0);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, 0);//d_omega_y
+#if 0
+		printf("G\n");
+		filter.Print2dMatr(filter.G, filter.getDimX(), filter.getDimQ());
+
+		#endif 
 		if (!filter.init) //Если ранее не было инициализации, то инициализируем
 		{
 			filter.Init(x0, q, /*r,*/ H);

@@ -184,7 +184,7 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 
 	Ldoub Om0;
 	MulMatrD(omo, omo, &Om0, 1, 3, 1); //сумма квадратов элементов Omb
-	Om0 = sqrt(Om0);
+	Om0 = sqrt(Om0); // корень из суммы квадратов
 
 	quaternion Dm(cos(Om0*h/2.), -omo[0]/Om0*sin(Om0*h/2.), -omo[1]/Om0*sin(Om0*h/2.), -omo[2]/Om0*sin(Om0*h/2.));
 	quaternion tempQuat = Dm*(Qp);
@@ -195,7 +195,7 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	Qf->y = tempQuat.y;
 	Qf->z = tempQuat.z;
 
-	Qf->normalize(1e-5);
+	Qf->normalize(1e-6);
 
 	Quat2Matr(Qf, Cbn); //пересчет кватерниона в матрицу
 

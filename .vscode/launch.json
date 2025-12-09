@@ -2,11 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug CMake",
+            "name": "INS Debug CMake",
             "type": "cppdbg", // Для отладки C++ кода
             "request": "launch",
             "program": "${workspaceFolder}/build/main", // Укажите путь к исполняемому файлу, который создается после сборки. Обычно это имя проекта, указанное в project() в CMakeLists.txt.
-            "args": ["0", "0", "0", "30", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/data_acc_veloc_30_heading_0_R_0_P_0_freq_100_turn_V_coo_gps.csv", "0", "1", "0", "0", "0", "0"], // Аргументы командной строки для программы
+            "args": ["0", "0", "0", "0", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/horizontal_gyr_bias_0_heading_0_R_0_P_0_freq_100_V_coo_gps.csv", "0", "1", "0", "1", "1", "1"], // Аргументы командной строки для программы
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -46,12 +46,12 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/PythonPlot/PlotGraph.py",
-            "args": ["data/Nav_res.csv", "data/Kalman_est.csv", "PythonPlot/Images/BiasGyr"],
+            "args": ["data/Nav_res.csv", "data/Kalman_est.csv", "PythonPlot/Images/x[6]_0"],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
+            // "env": {
+            //     "PYTHONPATH": "${workspaceFolder}"
+            // }
         },
     ]
 }
