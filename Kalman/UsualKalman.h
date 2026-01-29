@@ -3,20 +3,24 @@
 
 #include "ap.h"
 #include "linalg.h"
+#include "std.h"
 
 class UsualKalman
 {
 public:
-	UsualKalman(int, int);
-	void Init(double*, double*, double*, double* h);
+	UsualKalman(int, int, int, Ldoub h = 1/*такт в секундах, по умолчанию*/);
+	void Init(Ldoub*, Ldoub*, Ldoub*, Ldoub* h);
 	void Predict(); // функция предсказания по модели
-	void Update(double* );// функция обновления, т.е. вычисление оценки вектора по измерениям
+	void Update(Ldoub* );// функция обновления, т.е. вычисление оценки вектора по измерениям
 
 	alglib::real_1d_array  A;
+	alglib::real_1d_array  A2;
+	alglib::real_1d_array  A3;
 	alglib::real_1d_array  Phi;
 	alglib::real_1d_array H; //матрица измерений
 	alglib::real_1d_array G; // матрица входного шума
 	alglib::real_1d_array Q; //ковариационная матрица входных значений (модели)
+	alglib::real_1d_array GQGt; // произведение G * Q * Q^t 
 	alglib::real_1d_array R; // ковариационная матрица вектора измерений (входная)
 	alglib::real_1d_array Papr;//Априорная ошибка оценивания
 	alglib::real_1d_array Papst;//Апостериорная ошибка оценивания
@@ -32,13 +36,16 @@ public:
 
 	int getDimX(); //функция для получения private размерности
 	int getDimZ(); //функция для получения private размерности
+	int getDimQ(); //функция для получения private размерности матрицы Q
 	void setDimX(int); //функция для установки private размерности
 	void setDimZ(int); //функция для установки private размерности
+	void setDimQ( int ); //функция для установки private размерности матрицы Q
 	void Print2dMatr(alglib::real_1d_array A, int dim1, int dim2);//Функция дл вывода на печать матриц
+	Ldoub h;
 private:
 	int dim_x; //размер вектора состояния
 	int dim_z; //размер вектора измерений
-
+	int dim_q; // размер матрицы Q (входного шума)
 };
 
 #endif //USUALKALMAN_H

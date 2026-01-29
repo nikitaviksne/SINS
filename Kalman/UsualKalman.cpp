@@ -5,15 +5,19 @@
 #include "std.h"
 #include <stdio.h>
 
-//#define dev
+// #define dev
 
-UsualKalman::UsualKalman(int dimx, int dimz)
+UsualKalman::UsualKalman(int dimx, int dimz, int dimq, Ldoub h)
 {
 	setDimX(dimx);
 	setDimZ(dimz);
+	setDimQ(dimq); // установка размера матрицы q
+	this->h = h;
 
 	Papr.setlength(dim_x * dim_x);
 	A.setlength(dim_x * dim_x);
+	A2.setlength(dim_x * dim_x);
+	A3.setlength(dim_x * dim_x);
 	Phi.setlength(dim_x * dim_x);
 	#if 0
 	Phi[index_3(dim_x, 0, 0)] = 1;	Phi[index_3(dim_x, 0, 1)] = 1;
@@ -24,7 +28,9 @@ UsualKalman::UsualKalman(int dimx, int dimz)
 
 	x.setlength(dim_x * 1);
 	x_1.setlength(dim_x * 1);
-	Q.setlength(dim_x * dim_x);
+	Q.setlength(dim_q * dim_q);
+	G.setlength(dim_x*dim_q); // dim_x * dim_q
+	GQGt.setlength(dim_x*dim_x); // dim_x * dim_x
 	R.setlength(dim_z * dim_z);
 	H.setlength(dim_z * dim_x);
 	K.setlength(dim_x * dim_z);
@@ -68,7 +74,7 @@ UsualKalman::UsualKalman(int dimx, int dimz)
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
 }
-void UsualKalman::Init(double* initVal, double* q, double* r, double* h)
+void UsualKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* r, Ldoub* h)
 {
 //Функция инициализации
 
@@ -78,9 +84,11 @@ void UsualKalman::Init(double* initVal, double* q, double* r, double* h)
 	{
 		x[iii] = initVal[iii];
 	}
-	for(int iii=0; iii<getDimX(); ++iii)
-		for(int jjj=0; jjj<getDimX(); ++jjj)
-			Q[index_3(dim_x, iii, jjj)] = q[index_3(dim_x, iii, jjj)];
+
+	for(int iii=0; iii < getDimQ(); ++iii)
+		for(int jjj=0; jjj < getDimQ(); ++jjj)
+			Q[index_3(getDimQ(), iii, jjj)] = q[index_3(getDimQ(), iii, jjj)];
+
 	for (int iii=0; iii<getDimZ(); ++iii)
 		for(int jjj=0; jjj<getDimZ(); ++jjj)
 			R[index_3(dim_z, iii, jjj)] = r[index_3(dim_z, iii, jjj)]; //начальная инициализация любым значением не повлияет на вычисления
@@ -95,6 +103,10 @@ void UsualKalman::Init(double* initVal, double* q, double* r, double* h)
 
 void UsualKalman::Predict()
 {
+	matMul(getDimX(), getDimX(), getDimX(), A, A, A2);
+	matMul(getDimX(), getDimX(), getDimX(), A2, A, A3);
+	for (int iii =0; iii < getDimX()*getDimX(); ++iii) //вычисляю матрицу перехода Phi
+		Phi[iii] = I[iii] + A[iii] * h + A2[iii] * pow(h,2) / 2. + A3[iii] * pow(h, 3) / 6.; //не забываем умножить на такт интегрирования
 	matMul(getDimX(), getDimX(), 1, Phi, x, x_1); //предсказываем вектор состояния x_1  = Phi @ x
 
 	/*предсказываем априорную ошибку оценивания (используя апостериорную и ковариацию входного шума)*/
@@ -112,13 +124,47 @@ void UsualKalman::Predict()
 
 	matMul(getDimX(), getDimX(), getDimX(), Phi_Papst, Phi_t, Phi_Papst_Phi_t);
 
-	//Вот тут возможно должна быть матрица входного шума G, но я тогда не понимаю, получается, что тогда идмерительный шум один и тот-же?
-	for (int iii=0; iii<getDimX()*getDimX(); ++iii)
-		Papr[iii] = Phi_Papst_Phi_t[iii] + Q[iii];
+#ifdef dev
+	printf("Матрица G\n");
+	Print2dMatr(G, getDimX(), getDimQ());
+#endif
 
+	//Вспомогательная матрица GQ
+	alglib::real_1d_array GQ;
+	GQ.setlength(getDimX()*getDimQ());
+	matMul(getDimX(), getDimQ(), getDimQ(), G, Q, GQ);
+
+#ifdef dev
+	printf("Матрица GQ\n");
+	Print2dMatr(GQ, getDimX(), getDimQ());
+#endif
+	// делаем вспомогательную матрицу Gt = G^T
+	alglib::real_1d_array Gt; 
+	Gt.setlength(getDimQ()*getDimX()); 
+	transpose(getDimX(), getDimQ(), G, Gt);
+
+#ifdef dev
+	printf("Матрица G^t\n");
+	Print2dMatr(Gt, getDimQ(), getDimX());
+#endif
+	//Вычисляем матрицу GQGt
+	matMul(getDimX(), getDimQ(), getDimX(), GQ, Gt, GQGt);
+
+#ifdef dev
+	printf("Матрица QQG^t\n");
+	Print2dMatr(GQGt, getDimX(), getDimX());
+#endif
+
+	for (int iii=0; iii<getDimX()*getDimX(); ++iii)
+		Papr[iii] = Phi_Papst_Phi_t[iii] + GQGt[iii];
+
+#ifdef dev
+	printf("Матрица Papr\n");
+	Print2dMatr(Papr, getDimX(), getDimX());
+#endif
 }
 
-void UsualKalman::Update(double* zin/*измерения обычные C-массивы*/)
+void UsualKalman::Update(Ldoub* zin/*измерения обычные C-массивы*/)
 {
 	for(int i=0; i< getDimZ(); i++)
 		this->z[i] = zin[i];
@@ -235,6 +281,12 @@ int UsualKalman::getDimZ() //функция для получения private р
 {
 	return dim_z;
 }
+
+int UsualKalman::getDimQ() //функция для получения private размерности
+{
+	return dim_q;
+}
+
 void UsualKalman::setDimX(int val) //функция для установки private размерности
 {
 	dim_x = val;
@@ -243,12 +295,17 @@ void UsualKalman::setDimZ(int val) //функция для установки pr
 {
 	dim_z = val;
 }
+
+void UsualKalman::setDimQ(int val) //функция для установки private размерности
+{
+	dim_q = val;
+}
 void UsualKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//Функция дл вывода на печать матриц
 {
 	for (int iii=0; iii<dim1; ++iii)//по строкам
 	{
 		for (int jjj=0; jjj<dim2; ++jjj) //по столбцам
-			printf("%10.10f ", A[index_3(dim2, iii, jjj)]);
+			printf("%e ", A[index_3(dim2, iii, jjj)]);
 		printf("\n");
 	}
 }

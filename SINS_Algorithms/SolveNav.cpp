@@ -9,7 +9,7 @@
 #include <stdio.h>
 #endif
 
-void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, Ldoub* ErrVins, bool allowCorr)
+void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* Omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, Ldoub* ErrVins, bool allowCorr)
 {
     MulMatrD(Cbn, Wp, Wo, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Wo -- уже не ускорения, а приращение скоростей
 
@@ -29,9 +29,9 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	//Кориолисовы добавки
 	Ldoub aCoriolis[3] = {0};
 	#if 1
-	aCoriolis[0] = (Ldoub) ((Ldoub) omo[1]*V[2] - (Ldoub) omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
-	aCoriolis[1] = (Ldoub) ((Ldoub) -omo[0]*V[2] + (Ldoub) omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
-	aCoriolis[2] = (Ldoub) ((Ldoub) omo[0]*V[1] - (Ldoub) omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
+	aCoriolis[0] = (Ldoub) ((Ldoub) Omo[1]*V[2] - (Ldoub) Omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
+	aCoriolis[1] = (Ldoub) ((Ldoub) -Omo[0]*V[2] + (Ldoub) Omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
+	aCoriolis[2] = (Ldoub) ((Ldoub) Omo[0]*V[1] - (Ldoub) Omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
 	#else // по соображениям теоретической механики. Ускорение Кориолиса равно удвоенному векторному произведению абсолютной угловой скорости подвижного базиса на относительнуюлинейную скорость
 	aCoriolis[0] = (Ldoub) 2 * ((Ldoub) Omo[1]*V[2] - (Ldoub) Omo[2]*V[1]);
 	aCoriolis[1] = (Ldoub) 2 * ((Ldoub) -Omo[0]*V[2] + (Ldoub) Omo[2]*V[0]);
@@ -42,10 +42,15 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	printf("aCoriolis[0] = %.8f aCoriolis[1] = %.8f aCoriolis[2] = %.8f\n", aCoriolis[0], aCoriolis[1], aCoriolis[2]);
 	#endif //dev
 	
-	for (int iii=0; iii < 2; ++iii)	V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
-		
+	for (int iii=0; iii < 2; ++iii)	
+	{
+		V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
+	}
+		const Ldoub g (9.81);
+		V[2] = V[2] + Wo[2] - (1*aCoriolis[2] + g)*h;
+	
 	//Ошибки по скоростям в м/с и координатам в м
-	for (int iii=0; iii<2; ++iii)
+	for (int iii=0; iii<3; ++iii)
     {
 		Err_V[iii] = V[iii] - V0[iii];
         CoordError[iii] += (Err_V[iii]) * h;
@@ -53,6 +58,6 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 
 
 	Rlambda = R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
-	Rphi = R*(1. - pow(e,2))/(sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
+	Rphi = R*(1. - pow(e,2))/(sqrt(1. - pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
 		
 }

@@ -13,7 +13,7 @@ template <class T> void matMul(int aRows, int aCols, int bCols, T A, T  B, T& C)
 			double sum (0);
 			for (int jjj=0; jjj<aCols; ++jjj) //По столбцам массива B
 			{
-				 sum = A[index_3(aCols, iii, jjj)] * B[index_3(bCols, jjj, kkk)];
+				 sum += A[index_3(aCols, iii, jjj)] * B[index_3(bCols, jjj, kkk)];
 			}
 			C[index_3(bCols, iii, kkk)] = sum ;
 		}

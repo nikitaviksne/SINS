@@ -55,7 +55,7 @@ void print2dMatr(Ldoub* A, int rows, int cols)
 	for(int iii=0; iii<rows; ++iii)
 	{
 		for(int jjj=0; jjj<cols; ++jjj)
-			printf("%.10f\t", A[index_3(cols, iii, jjj)]);
+			printf("%.10Lf\t", A[index_3(cols, iii, jjj)]);
 		printf("\n");
 	}
 }

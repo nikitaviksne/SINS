@@ -178,6 +178,14 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	Ldoub F;
 	MulMatrD(Omb, Omb, &F, 1, 3, 1); //сумма квадратов элементов Omb
 	F = sqrt(F);
+	/*
+	quaternion DL;//(cos(F*h/2.), Omb[0]/F*sin(F*h/2.), Omb[1]/F*sin(F*h/2.), Omb[2]/F*sin(F*h/2.));
+	DL.w = 1 - pow(F, 2)/3. + pow(F, 4)/384.;
+	Ldoub r = 0.5 - pow(F, 2)/48. - pow(F, 4)/3840.;
+	DL.x = r*Omb[0]*h;
+	DL.y = r*Omb[1]*h;
+	DL.z = r*Omb[2]*h;
+	*/
 	quaternion DL(cos(F*h/2.), Omb[0]/F*sin(F*h/2.), Omb[1]/F*sin(F*h/2.), Omb[2]/F*sin(F*h/2.));
 	
 	quaternion Qp = (*Qf)*DL; //предварительный (быстрый) кватернион

@@ -6,7 +6,7 @@
             "type": "cppdbg", // Для отладки C++ кода
             "request": "launch",
             "program": "${workspaceFolder}/build/main", // Укажите путь к исполняемому файлу, который создается после сборки. Обычно это имя проекта, указанное в project() в CMakeLists.txt.
-            "args": ["0", "0", "0", "0", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/horizontal_gyr_bias_0_heading_0_R_0_P_0_freq_100_V_coo_gps.csv", "0", "1", "0", "1", "1", "1"], // Аргументы командной строки для программы
+            "args": ["0", "0", "0", "0", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/horizontal_gyr_bias_0_heading_0_R_0_P_0_freq_100_V_coo_gps_fast_turn.csv", "0", "1", "0", "1", "1", "1"], // Аргументы командной строки для программы
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -34,10 +34,12 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
+            "python": "/home/nikita/miniconda3/bin/python",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
+                // "PYTHONPATH": "~/home/nikita/miniconda3"
             },
-            "preLaunchTask": "python-pre-launch"
+            // "preLaunchTask": "python-pre-launch"
         },
 
         // Конфигурация для отладки конкретного Python файла
@@ -49,9 +51,9 @@
             "args": ["data/Nav_res.csv", "data/Kalman_est.csv", "PythonPlot/Images/x[6]_0"],
             "console": "integratedTerminal",
             "justMyCode": true,
-            // "env": {
-            //     "PYTHONPATH": "${workspaceFolder}"
-            // }
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
     ]
 }

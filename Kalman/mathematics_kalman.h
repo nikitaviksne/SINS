@@ -4,9 +4,10 @@
 #include "ap.h"
 #include "linalg.h"
 
+#if 1
 //шаблон функции для умножения любых типов одномерных массивов (и alglib и обычных C-массивов)
 template <class T> void matMul(int aRows, int aCols, int bCols, T A, T B, T& C);
-
+#endif
 //Перегрузка функции для умножения одномерных массивов alglib как матрицы
 void matMul(int aRows, int aCols, int bCols, alglib::real_1d_array A, alglib::real_1d_array B, alglib::real_1d_array& C);
 //void matMul(int);

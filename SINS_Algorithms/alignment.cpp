@@ -9,10 +9,10 @@ void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *Me
 	for(int i=0; i<3; ++i)
 	{
 		// применяем метод Уэлфорда
-			MeanAb[i] = (Ldoub) (iter * MeanAb[i] + Ab[i])/(iter + 1); //MeanAb[i] + (Ab[i] - MeanAb[i]) / (iter + 1);
-			StdAb[i] = (Ldoub) (1 - 1/(iter + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(iter + 1);
-			MeanOmb[i] = (Ldoub) (iter * MeanOmb[i] + Omb[i])/(iter + 1);//MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (iter + 1);
-			StdOmb[i] = (Ldoub) (1 - 1/(iter + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(iter + 1);
+			MeanAb[i] = (Ldoub) (iter * MeanAb[i] + Ab[i])/(iter + 1.); //MeanAb[i] + (Ab[i] - MeanAb[i]) / (iter + 1);
+			StdAb[i] = (Ldoub) (1 - 1./(iter + 1))*StdAb[i] + (Ab[i] - MeanAb[i])*(Ab[i] - MeanAb[i])/(iter + 1.);
+			MeanOmb[i] = (Ldoub) (iter * MeanOmb[i] + Omb[i])/(iter + 1.);//MeanOmb[i] + (Omb[i] - MeanOmb[i]) / (iter + 1);
+			StdOmb[i] = (Ldoub) (1 - 1./(iter + 1))*StdOmb[i] + (Omb[i] - MeanOmb[i])*(Omb[i] - MeanOmb[i])/(iter + 1.);
 	}
 	//Вычисление (ориентации) матрицы перехода Cbn = [c00, c01, c02, c10, c11, c12, c20, c21, c22]
 	// Ищем обратную (транспонированную) матрицу
@@ -35,5 +35,13 @@ void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *Me
 	TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 0)], res2, err2);
 	Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
 
+	for (int i=0; i<3; i++)
+				{
+					for (int j=0; j<3; j++)
+					{
+						Cbn[index_3(3, i, j)] = 0;
+					}
+					Cbn[index_3(3, i,i)] = 1;
+				}
 	Matr2Quat(Cbn, Qf);
 }
