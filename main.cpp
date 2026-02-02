@@ -353,8 +353,8 @@ int main(int argc, char *argv[])
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_input_noise * dim_input_noise] = {0};
 	// q[index_3(dim_input_noise, (dim_input_noise - 3), (dim_input_noise - 3))] = 1*pow(0.02*deg2rad/3600., 2); //delta_omega_x
-	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = 0*pow(0.02*deg2rad/3600., 2); //delta_omega_x
-	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 0*pow(0.02*deg2rad/3600., 2); //delta_omega_y
+	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = 1*pow(0.02*deg2rad/3600., 4); //delta_omega_x
+	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 1*pow(0.02*deg2rad/3600., 4); //delta_omega_y
 	
 	// Заполнение всей матрицы G нулями
 	for (int iii=0; iii<filter.getDimX(); iii++)
@@ -911,8 +911,8 @@ int main(int argc, char *argv[])
 			for(int i=0; i<dim_state; ++i)
 				fprintf(estimations, "%.10e,", filter.x[i]);
 			double d_psi (filter.x[8] - (filter.x[4+2] * sin(Orientation[0]) + filter.x[5+2] * cos(Orientation[0]))*tan(Orientation[2] )); //это угол курса, а нек ошибки курса
-			double d_roll = -(filter.x[5+2] * cos(Orientation[0]) + filter.x[4+2] * sin(Orientation[0])) * (1./cos(Orientation[2]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
-			double d_pitch = -(filter.x[4+2] * cos(Orientation[0]) - filter.x[5+2] * sin(Orientation[0]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			double d_roll = -(filter.x[3+2] * cos(Orientation[0]) + filter.x[2+2] * sin(Orientation[0])) * (1./cos(Orientation[2]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
+			double d_pitch = -(filter.x[2+2] * cos(Orientation[0]) - filter.x[3+2] * sin(Orientation[0]));//Ошибка крена по (ошибкам?) ориентации Fx, Fy
 			fprintf(estimations, "%.10e,", d_psi);
 			fprintf(estimations, "%.10e,", d_roll);
 			fprintf(estimations, "%.10e,", d_pitch);
