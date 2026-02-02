@@ -55,7 +55,7 @@ fig1_ax2.grid(True)
 fig1_ax3.set_title("Ошибка вертикальной скорости");
 fig1_ax3.set_xlabel("мин")
 fig1_ax3.set_ylabel("м/с")
-fig1_ax3.plot(time, np.round(estimations["Vup"],round), linestyle='--', label="$\hat{\Delta V_{up}}$"); # не на своем месте, но по графикам должно быть так
+# fig1_ax3.plot(time, np.round(estimations["Vup"],round), linestyle='--', label="$\hat{\Delta V_{up}}$"); # не на своем месте, но по графикам должно быть так
 fig1_ax3.plot(time, np.round(data["d_VUp"],round), label="$\Delta$ V_{up}");
 fig1_ax3.legend(loc="best")
 fig1_ax3.grid(True)
