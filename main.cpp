@@ -351,8 +351,8 @@ int main(int argc, char *argv[])
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_input_noise * dim_input_noise] = {0};
-	q[index_3(dim_input_noise, (dim_input_noise - 3), (dim_input_noise - 3))] = pow(0.02*deg2rad/3600., 2); //delta_omega_x
-	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = pow(0.02*deg2rad/3600., 2); //delta_omega_y
+	q[index_3(dim_input_noise, (dim_input_noise - 3), (dim_input_noise - 3))] = 0*pow(0.02*deg2rad/3600., 4); //delta_omega_x
+	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = 0*pow(0.02*deg2rad/3600., 4); //delta_omega_y
 	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 0*pow(0.02*deg2rad/3600., 2); //delta_omega_z
 	
 	// Заполнение всей матрицы G нулями
@@ -696,7 +696,7 @@ int main(int argc, char *argv[])
 		filter.G[index_3(filter.getDimQ(), (6), (1))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, 0);//d_omega_y
 	#endif
 		// как было до этого
-		int pow_h = 4;
+		int pow_h = 1;
 		//Phi_x
 		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
 		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
