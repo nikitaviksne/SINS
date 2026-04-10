@@ -6,7 +6,7 @@
             "type": "cppdbg", // Для отладки C++ кода
             "request": "launch",
             "program": "${workspaceFolder}/build/main", // Укажите путь к исполняемому файлу, который создается после сборки. Обычно это имя проекта, указанное в project() в CMakeLists.txt.
-            "args": ["0", "0", "0", "0", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/horizontal_gyr_bias_0_heading_0_R_0_P_0_freq_100_V_coo_gps_fast_turn.csv", "0", "1", "0", "1", "1", "1"], // Аргументы командной строки для программы
+            "args": ["45", "0", "0", "0", "/home/nikita/Документы/C_Cpp_progs/InertialNavigation/Data_files/data_acc_veloc_0_heading_45_R_0_P_0_freq_100_turn_V_coo_gps.csv", "0", "1", "0", "1", "1", "1"], // Аргументы командной строки для программы
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

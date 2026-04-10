@@ -32,6 +32,11 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	aCoriolis[0] = (Ldoub) ((Ldoub) Omo[1]*V[2] - (Ldoub) Omo[2]*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
 	aCoriolis[1] = (Ldoub) ((Ldoub) -Omo[0]*V[2] + (Ldoub) Omo[2]*V[0] + (Ldoub) U*sin(Coordinates[0])*V[0]);
 	aCoriolis[2] = (Ldoub) ((Ldoub) Omo[0]*V[1] - (Ldoub) Omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);
+	
+	/*// по Салычеву стр 70 applied navigation algorithm strapdown system navigation alogithm
+	aCoriolis[0] = (Ldoub) ((Ldoub) Omo[1]*V[2] - (Ldoub) 2*U*sin(Coordinates[0])*V[1] + (Ldoub) U*cos(Coordinates[0])*V[2] - (Ldoub) U*sin(Coordinates[0])*V[1]);
+	aCoriolis[1] = (Ldoub) ((Ldoub) -Omo[0]*V[2] + (Ldoub) 2*U*sin(Coordinates[0])*V[0] );
+	aCoriolis[2] = (Ldoub) ((Ldoub) Omo[0]*V[1] - (Ldoub) Omo[1]*V[0] - (Ldoub) U*cos(Coordinates[0])*V[0]);*/
 	#else // по соображениям теоретической механики. Ускорение Кориолиса равно удвоенному векторному произведению абсолютной угловой скорости подвижного базиса на относительнуюлинейную скорость
 	aCoriolis[0] = (Ldoub) 2 * ((Ldoub) Omo[1]*V[2] - (Ldoub) Omo[2]*V[1]);
 	aCoriolis[1] = (Ldoub) 2 * ((Ldoub) -Omo[0]*V[2] + (Ldoub) Omo[2]*V[0]);
@@ -47,8 +52,12 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 		V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
 	}
 		const Ldoub g (9.81);
-		V[2] = V[2] + Wo[2] - (1*aCoriolis[2] + g)*h;
+		// V[2] = V[2] + Wo[2] - (1*aCoriolis[2] + g)*h;
 	
+	
+	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))*h;
+	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))*h;
+
 	//Ошибки по скоростям в м/с и координатам в м
 	for (int iii=0; iii<3; ++iii)
     {

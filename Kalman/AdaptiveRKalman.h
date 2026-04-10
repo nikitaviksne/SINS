@@ -11,6 +11,7 @@ class AdaptiveRKalman
 public:
 	AdaptiveRKalman(int, int, int, Ldoub h = 1/*такт в секундах, по умолчанию*/);
 	void Init(Ldoub* initVal, Ldoub* q, Ldoub* h/*матрица измерений*/);
+	void Init(Ldoub* initVal, Ldoub* q, Ldoub* r, Ldoub* h/*матрица измерений*/); // для согласования с обычновенным Ф.К. 
 	void Predict(); // функция предсказания по модели
 	void Update(Ldoub* );// функция обновления, т.е. вычисление оценки вектора по измерениям
 

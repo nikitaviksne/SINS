@@ -73,6 +73,7 @@ UsualKalman::UsualKalman(int dimx, int dimz, int dimq, Ldoub h)
 	R[index_3(dim_x, 0, 0)] = r1;	R[index_3(dim_x, 0, 1)] = 0;
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
+	init = false;
 }
 void UsualKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* r, Ldoub* h)
 {

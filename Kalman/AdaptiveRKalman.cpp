@@ -77,6 +77,11 @@ AdaptiveRKalman::AdaptiveRKalman(int dimx, int dimz, int dimq, Ldoub h)
 	R[index_3(dim_x, 0, 0)] = r1;	R[index_3(dim_x, 0, 1)] = 0;
 	R[index_3(dim_x, 1, 0)] = 0;	R[index_3(dim_x, 1, 1)] = q2;
 #endif
+	init = false;
+}
+void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* r, Ldoub* h/*матрица измерений*/)
+{
+	Init(initVal, q, h);
 }
 void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h/*матрица измерений*/)
 {//Инициализация значениями
@@ -175,7 +180,15 @@ void AdaptiveRKalman::Update(Ldoub* zin/*измерения обычные C-м�
 	//Вычисляем v*v.T
 	alglib::real_1d_array vvt;
 	vvt.setlength(getDimZ() * getDimZ());
-	matMul(getDimZ(), 1, getDimZ(), v, v, vvt);
+	for(int i=0; i<getDimZ(); i++)
+	{
+		for(int j=0; j<getDimZ(); j++) //все элементы по 0
+		{
+			vvt[index_3(getDimZ(), i, j)] = 0;
+		}
+		vvt[index_3(getDimZ(), i, i)] = pow(v[i],2);//главная диагональ с дисперсиями
+	}
+	// matMul(getDimZ(), 1, getDimZ(), v, v, vvt);
 
 	//Вычислям C
 	for(int iii=0; iii<getDimZ(); iii++) 
@@ -220,14 +233,21 @@ void AdaptiveRKalman::Update(Ldoub* zin/*измерения обычные C-м�
 		R[iii] = temp;
 	}
 	
-	for (int iii=0; iii<getDimZ(); ++iii)
-		if (R[index_3(getDimZ(), iii, iii)] < 0) //проверка на отрицательность диагональных элементов C
+#if 1
+	for (int iii=0; iii<getDimZ()/**getDimZ()*/; ++iii)
+		if (R[index_3(getDimZ(), iii, iii)] < 0) //проверка на отрицательность ---диагональных элементов C---
 		{
-			for(int jjj=0; jjj<getDimZ(); ++jjj) //все диагональные элементы устанавливаем в 0
-				R[index_3(getDimZ(), jjj, jjj)] = 0;
+			for(int kkk=0; kkk<getDimZ()/**getDimZ()*/; ++kkk) //все диагональные элементы устанавливаем в 0
+				R[index_3(getDimZ(), kkk, kkk)] = 0;
 			break; //и выходим из внешнего цикла
 		}
-
+#else //значения из обычного фильтра Калмана
+Ldoub freq = 100.0;
+	R[0] = pow(0.2*sqrt(freq), 2); R[1] = 0; R[2] = 0; R[3] = 0;
+	R[4] = 0; R[5] = pow(0.2*sqrt(freq), 2); R[6] = 0; R[7] = 0;  
+	R[8] = 0; R[9] =  0; R[10] = pow(0.05*sqrt(freq), 2); R[11] = 0;
+	R[12] = 0; R[13] = 0; R[14] = 0; R[15] = pow(0.05*sqrt(freq), 2);
+#endif 
 #ifdef dev
 	printf("R:\n");
 	Print2dMatr(R, getDimZ(), getDimZ());

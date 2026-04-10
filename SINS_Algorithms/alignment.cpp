@@ -34,14 +34,5 @@ void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *Me
 	TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 1)], res1, err1);
 	TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 0)], res2, err2);
 	Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
-
-	for (int i=0; i<3; i++)
-				{
-					for (int j=0; j<3; j++)
-					{
-						Cbn[index_3(3, i, j)] = 0;
-					}
-					Cbn[index_3(3, i,i)] = 1;
-				}
 	Matr2Quat(Cbn, Qf);
 }

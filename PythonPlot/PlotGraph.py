@@ -27,8 +27,8 @@ estimations = pd.read_csv(path_est, delimiter=",");
 start = 0;
 stop = -1; #1*60*100
 
-# time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
-time = np.linspace(0, (data.iloc[:, 0].size - 1), data.iloc[:, 0].size) # в тактах
+time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #в минутах /100/60
+# time = np.linspace(0, (data.iloc[:, 0].size - 1), data.iloc[:, 0].size) # в тактах
 
 round = 100
 
@@ -39,24 +39,24 @@ fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
-fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$ Ve");
+fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$\hat{\Delta Ve}$");
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
 fig1_ax2.set_title("Ошибка северной скорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
-fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");  # не на своем месте, но по графикам должно быть так
 fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
+fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\hat{\Delta Vn}$");  # не на своем месте, но по графикам должно быть так
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
 # Вертикальная составляющая
 fig1_ax3.set_title("Ошибка вертикальной скорости");
 fig1_ax3.set_xlabel("мин")
 fig1_ax3.set_ylabel("м/с")
-# fig1_ax3.plot(time, np.round(estimations["Vup"],round), linestyle='--', label="$\hat{\Delta V_{up}}$"); # не на своем месте, но по графикам должно быть так
 fig1_ax3.plot(time, np.round(data["d_VUp"],round), label="$\Delta$ V_{up}");
+# fig1_ax3.plot(time, np.round(estimations["Vup"],round), linestyle='--', label="$\hat{\Delta V_{up}}$"); #
 fig1_ax3.legend(loc="best")
 fig1_ax3.grid(True)
 #fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
@@ -68,16 +68,16 @@ fig2.suptitle("Углы")
 fig2_ax1.set_title("Угол курса");
 fig2_ax1.set_xlabel("мин")
 fig2_ax1.set_ylabel("Град.")
-fig2_ax1.plot(time, np.round(np.rad2deg(estimations["d_Psi"]),round), label="$\hat{\Delta\Psi}$");
 fig2_ax1.plot(time, np.round(np.rad2deg(data["Heading"]),round), label="Курс");
+fig2_ax1.plot(time, np.round(np.rad2deg(estimations["d_Psi"]),round), label="$\hat{\Delta\Psi}$");
 fig2_ax1.legend(loc="best")
 fig2_ax1.grid(True)
 # Угол крена
 fig2_ax2.set_title("Угол крена");
 fig2_ax2.set_xlabel("Мин")
 fig2_ax2.set_ylabel("Угл. мин")
-fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\Delta\gamma}$");
 fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="$\gamma$");
+fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\Delta\gamma}$");
 fig2_ax2.set_ylim(-0.5, 0.9)
 fig2_ax2.legend(loc="best")
 fig2_ax2.grid(True)
@@ -85,8 +85,8 @@ fig2_ax2.grid(True)
 fig2_ax3.set_title("Угол тангажа");
 fig2_ax3.set_xlabel("Мин")
 fig2_ax3.set_ylabel("Угл. мин")
-fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\Delta\\theta}$");
 fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="$\\theta$");
+fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\Delta\\theta}$");
 fig2_ax3.set_ylim(-0.5, 2)
 fig2_ax3.legend(loc="best")
 fig2_ax3.grid(True)
@@ -115,7 +115,7 @@ del(flf_alpha[0][0])
 del(flf_alpha[1][0])
 
 '''Оценки дрейфов гироскопов'''
-fig3, (fig3_ax1, fig3_ax2) = plt.subplots(2, 1)
+fig3, (fig3_ax1, fig3_ax2, fig3_ax3) = plt.subplots(3, 1)
 # Восточное направление
 fig3.suptitle("Оценка скоростей дрейфов гироскопов")
 fig3_ax1.set_title("Оценка скоростей дрейфа гироскопа канала X")
@@ -135,7 +135,7 @@ fig3_ax1.plot(time, np.round(np.rad2deg(estimations["d_omega_x"]), round)*3600, 
 fig3_ax1.plot(time, np.round(np.rad2deg(flf_alpha[0]), round)*3600, label="$\omega_{x}^{F\\alpha}$");
 fig3_ax1.grid(True)
 fig3_ax1.legend(loc="best")
-#
+#дрейф северного гироскопа
 fig3_ax2.set_title("Оценка скоростей дрейфа гироскопа канала Y")
 fig3_ax2.set_xlabel("Мин")
 fig3_ax2.set_ylabel("Град/час")
@@ -153,6 +153,16 @@ fig3_ax2.plot(time, np.round(np.rad2deg(estimations["d_omega_y"]), round)*3600, 
 fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y}^{F\\alpha}$");
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
+#дрейф курсового гироскопа
+'''
+fig3_ax3.set_title("Оценка скоростей дрейфа гироскопа канала Z")
+fig3_ax3.set_xlabel("Мин")
+fig3_ax3.set_ylabel("Град/час")
+fig3_ax3.set_ylim(-0.25, 0.25)
+fig3_ax3.plot(time, np.round(np.rad2deg(estimations["d_omega_z"]), round)*3600, label="$\delta\omega_z$");
+fig3_ax3.grid(True)
+fig3_ax3.legend(loc="best")
+# '''
 
 fig20, (fig20_ax1) = plt.subplots(ncols=1, nrows=1)
 fig20.suptitle("Скорости ИНС")

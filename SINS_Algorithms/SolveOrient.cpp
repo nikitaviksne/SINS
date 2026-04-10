@@ -172,9 +172,6 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	omo[0] = (Ldoub) Omo[0] - allowCorr * k2/Rphi * DVerr[1]; 
     omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]) + allowCorr * k2/Rphi * DVerr[0];
     omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
-	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))/freq;
-	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))/freq;
-
 	Ldoub F;
 	MulMatrD(Omb, Omb, &F, 1, 3, 1); //сумма квадратов элементов Omb
 	F = sqrt(F);
