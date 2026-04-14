@@ -69,12 +69,13 @@ Ldoub quaternion::norma()
 void quaternion::normalize(Ldoub limit)
 {
 	Ldoub norma (this->norma());
-	if ( abs(1 - norma) > limit)
+	Ldoub delta (1 - norma);
+	if ( abs(delta) > limit)
 	{
-		this->w *= ((1 + norma/2.));
-		this->x *= ((1 + norma/2.));
-		this->y *= ((1 + norma/2.));
-		this->z *= ((1 + norma/2.));
+		this->w *= ((1 + delta/2.));
+		this->x *= ((1 + delta/2.));
+		this->y *= ((1 + delta/2.));
+		this->z *= ((1 + delta/2.));
 	}
 }
 void Quat2Matr(quaternion Q, Ldoub* C)

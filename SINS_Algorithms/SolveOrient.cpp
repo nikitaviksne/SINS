@@ -169,8 +169,8 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	Omo[1] = (Ldoub) V[0]/(Rlambda + Coordinates[2]);
 	Omo[2] = (Ldoub) V[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0]); // tan(phi0)
 
-	omo[0] = (Ldoub) Omo[0] - allowCorr * k2/Rphi * DVerr[1]; 
-    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]) + allowCorr * k2/Rphi * DVerr[0];
+	omo[0] = (Ldoub) Omo[0];// - allowCorr * k2/Rphi * DVerr[1]; 
+    omo[1] = (Ldoub) Omo[1] + (Ldoub) U*cos(Coordinates[0]);// + allowCorr * k2/Rphi * DVerr[0];
     omo[2] = Omo[2] + (Ldoub) U*sin(Coordinates[0]);
 	Ldoub F;
 	MulMatrD(Omb, Omb, &F, 1, 3, 1); //сумма квадратов элементов Omb
@@ -188,7 +188,7 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	quaternion Qp = (*Qf)*DL; //предварительный (быстрый) кватернион
 
 	Ldoub Om0;
-	MulMatrD(omo, omo, &Om0, 1, 3, 1); //сумма квадратов элементов Omb
+	MulMatrD(omo, omo, &Om0, 1, 3, 1); //сумма квадратов элементов omo
 	Om0 = sqrt(Om0); // корень из суммы квадратов
 
 	quaternion Dm(cos(Om0*h/2.), -omo[0]/Om0*sin(Om0*h/2.), -omo[1]/Om0*sin(Om0*h/2.), -omo[2]/Om0*sin(Om0*h/2.));

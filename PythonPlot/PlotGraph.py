@@ -154,7 +154,7 @@ fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\ome
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="best")
 #дрейф курсового гироскопа
-'''
+# '''
 fig3_ax3.set_title("Оценка скоростей дрейфа гироскопа канала Z")
 fig3_ax3.set_xlabel("Мин")
 fig3_ax3.set_ylabel("Град/час")

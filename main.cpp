@@ -113,9 +113,9 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
 		}
-		Omb[0] += 1.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]);
-		Omb[1] += 0.*(AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1]);
-		Omb[2] += 0.*(AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2]);
+		Omb[0] += 1.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]); //если только этот дрейф, то у меня больше ошибка по крену, а должна быть по тангажу, не в этом ли корень всех бед
+		Omb[1] += 1.*(AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1]); //если только этот дрейф, ФК чувсвует и оценивает правильно
+		Omb[2] += 1.*(AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2]);
 		//добавление шума к показаниям СНС
 		for(int iii=0; iii<2; ++iii)
 		{
@@ -334,12 +334,12 @@ int main(int argc, char *argv[])
 	Ldoub Verr1[2] = {0.}; // ошибки интегрирования ускорений
 	Ldoub Verr2[2] = {0.}; // ошибки накопления скоростей
 	///*
-	const int dim_state (6 + 2); //размер вектора состояния (+ координаты GPS)
+	const int dim_state (8 + 2); //размер вектора состояния (+ координаты GPS)
 	const int dim_sense (2 + 2); //размер вектора измерения (+ координаты GPS)
-	const int dim_input_noise (2); //размер матрицы входных шумов Q
+	const int dim_input_noise (3); //размер матрицы входных шумов Q
 	//*/
-	UsualKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
-	// AdaptiveRKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
+	// UsualKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
+	AdaptiveRKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
@@ -353,9 +353,9 @@ int main(int argc, char *argv[])
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_input_noise * dim_input_noise] = {0};
-	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = 9.216464188227491e-15; //1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_x
-	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 9.166739053519716e-15; //1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_y
-	// q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_z
+	q[index_3(dim_input_noise, (dim_input_noise - 3), (dim_input_noise - 3))] = 9.216464188227491e-15; //1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_x
+	q[index_3(dim_input_noise, (dim_input_noise - 2), (dim_input_noise - 2))] = 9.166739053519716e-15; //1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_y
+	q[index_3(dim_input_noise, (dim_input_noise - 1), (dim_input_noise - 1))] = 9.166739053519716e-15; //1*pow(0.02/sqrt(freq)*deg2rad/3600., 2); //delta_omega_z
 	
 	// Заполнение всей матрицы G нулями
 	for (int iii=0; iii<filter.getDimX(); iii++)
@@ -409,7 +409,8 @@ int main(int argc, char *argv[])
 		{
 			if (AlignmentContinue)
 			{
-			#if 0 // идеальная выставка с нулевыми углами курса, крена и тангажа
+			#if 1 // идеальная выставка с нулевыми углами курса, крена и тангажа
+				printf("Идеальная выставка\n");
 				for (int i=0; i<3; i++)
 				{
 					for (int j=0; j<3; j++)
@@ -418,7 +419,8 @@ int main(int argc, char *argv[])
 					}
 					Cbn[index_3(3, i,i)] = 1;
 				}
-			#endif
+				Matr2Quat(Cbn, &Qf);
+			#else
 				printf("Cbn перед переводом из кватерниона\n");
 				printf("[");
 				for (int iii=0; iii<9; ++iii)
@@ -432,9 +434,10 @@ int main(int argc, char *argv[])
 				for (int iii=0; iii<9; ++iii)
 					printf("%.10Lf, ", Cbn[iii]);
 				printf("]\n");
-
+			#endif
 				printf("Mean Omb not in Mean\n");
 				print2dMatr(MeanOmb, 1, 3);
+				
 				Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
 				// Вычисление углов ориентации
 				Heading = (Ldoub) atan2(Cbn[index_3(3, 0, 1)], Cbn[index_3(3, 1, 1)]);
@@ -523,10 +526,10 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 0, 5)] = (Ldoub) 0; //Voz
 		filter.A[index_3(dim_state, 0, 4)] = (Ldoub) 0; //Phi_ox
 		filter.A[index_3(dim_state, 0, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 0, 6)] = (Ldoub) 0;//U*cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]), 2)); //Phi_oz
-		filter.A[index_3(dim_state, 0, 6)] = (Ldoub) 0; //d_omega_x
-		filter.A[index_3(dim_state, 0, 7)] = (Ldoub) 0; //d_omega_y
-		// filter.A[index_3(dim_state, 0, 9)] = (Ldoub) 0; //d_omega_z
+		filter.A[index_3(dim_state, 0, 6)] = (Ldoub) 0;//U*cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]), 2)); //Phi_oz
+		filter.A[index_3(dim_state, 0, 7)] = (Ldoub) 0; //d_omega_x
+		filter.A[index_3(dim_state, 0, 8)] = (Ldoub) 0; //d_omega_y
+		filter.A[index_3(dim_state, 0, 9)] = (Ldoub) 0; //d_omega_z
 		//Delta dot lambda (долгота)
 		filter.A[index_3(dim_state, 1, 0)] = (Ldoub) tan(Coordinates[0])*V[0]/((R + Coordinates[2])*cos(Coordinates[0])); //varphi
 		filter.A[index_3(dim_state, 1, 1)] = (Ldoub) 0; //lambda
@@ -536,10 +539,10 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 1, 5)] = (Ldoub) 0; //Voz
 		filter.A[index_3(dim_state, 1, 4)] = (Ldoub) 0; //Phi_ox
 		filter.A[index_3(dim_state, 1, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 1, 6)] = (Ldoub) 0; //Phi_oz
-		filter.A[index_3(dim_state, 1, 6)] = (Ldoub) 0; //d_omega_x
-		filter.A[index_3(dim_state, 1, 7)] = (Ldoub) 0; //d_omega_y
-		// filter.A[index_3(dim_state, 1, 9)] = (Ldoub) 0; //d_omega_z
+		filter.A[index_3(dim_state, 1, 6)] = (Ldoub) 0; //Phi_oz
+		filter.A[index_3(dim_state, 1, 7)] = (Ldoub) 0; //d_omega_x
+		filter.A[index_3(dim_state, 1, 8)] = (Ldoub) 0; //d_omega_y
+		filter.A[index_3(dim_state, 1, 9)] = (Ldoub) 0; //d_omega_z
 		#if 0
 		//Delta dot h (высота)
 		filter.A[index_3(dim_state, 2, 0)] = (Ldoub) 0; //varphi
@@ -564,10 +567,10 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 3, 5)] = (Ldoub) -(V[0]/(R+Coordinates[2]) + 2 * U * cos(Coordinates[0]) ); // Voz
 		filter.A[index_3(dim_state, 2, 4)] = (Ldoub) 0; //Phi_ox
 		filter.A[index_3(dim_state, 2, 5)] = (Ldoub) -Ao[2]; //Phi_oy
-		// filter.A[index_3(dim_state, 2, 6)] = (Ldoub) Ao[1]; //Phi_oz
-		filter.A[index_3(dim_state, 2, 6)] = (Ldoub) 0; //d_omega_x
-		filter.A[index_3(dim_state, 2, 7)] = (Ldoub) 0; //d_omega_y
-		// filter.A[index_3(dim_state, 2, 9)] = (Ldoub) 0; //d_omega_z
+		filter.A[index_3(dim_state, 2, 6)] = (Ldoub) Ao[1]; //Phi_oz
+		filter.A[index_3(dim_state, 2, 7)] = (Ldoub) 0; //d_omega_x
+		filter.A[index_3(dim_state, 2, 8)] = (Ldoub) 0; //d_omega_y
+		filter.A[index_3(dim_state, 2, 9)] = (Ldoub) 0; //d_omega_z
 		//Delta dot V_oy
 		filter.A[index_3(dim_state, 3, 0)] = (Ldoub) -(V[0]/((R + Coordinates[2])*pow(cos(Coordinates[0]),2)) + (Ldoub) 2*U*cos(Coordinates[0]) )*V[0]; //varphi
 		filter.A[index_3(dim_state, 3, 1)] = (Ldoub) 0; //lambda
@@ -577,10 +580,10 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 4, 5)] = (Ldoub) - V[1]/(R+Coordinates[2]); //Voz
 		filter.A[index_3(dim_state, 3, 4)] = (Ldoub) Ao[2]; //Phi_ox
 		filter.A[index_3(dim_state, 3, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 3, 6)] = (Ldoub) -Ao[0]; //Phi_oz
-		filter.A[index_3(dim_state, 3, 6)] = (Ldoub) 0;//d_omega_x
-		filter.A[index_3(dim_state, 3, 7)] = (Ldoub) 0;//d_omega_y
-		// filter.A[index_3(dim_state, 3, 9)] = (Ldoub) 0;//d_omega_z
+		filter.A[index_3(dim_state, 3, 6)] = (Ldoub) -Ao[0]; //Phi_oz
+		filter.A[index_3(dim_state, 3, 7)] = (Ldoub) 0;//d_omega_x
+		filter.A[index_3(dim_state, 3, 8)] = (Ldoub) 0;//d_omega_y
+		filter.A[index_3(dim_state, 3, 9)] = (Ldoub) 0;//d_omega_z
 		#if 0
 		//Delta dot V_oz
 		filter.A[index_3(dim_state, 5, 0)] = (Ldoub) -2. * U * sin(Coordinates[0]) * V[0]; //varphi
@@ -605,10 +608,10 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 6, 5)] = (Ldoub) 0; //Voz
 		filter.A[index_3(dim_state, 4, 4)] = (Ldoub) 0; //Phi_ox
 		filter.A[index_3(dim_state, 4, 5)] = (Ldoub) omo[2]; //Phi_oy
-		// filter.A[index_3(dim_state, 4, 6)] = (Ldoub) -omo[1]; //Phi_oz
-		filter.A[index_3(dim_state, 4, 6)] = (Ldoub) (-Cbn[index_3(3, 0, 0)]);//d_omega_x
-		filter.A[index_3(dim_state, 4, 7)] = (Ldoub) (-Cbn[index_3(3, 0, 1)]);//d_omega_y
-		// filter.A[index_3(dim_state, 4, 9)] = (Ldoub) (-Cbn[index_3(3, 0, 2)]);//d_omega_z
+		filter.A[index_3(dim_state, 4, 6)] = (Ldoub) -omo[1]; //Phi_oz
+		filter.A[index_3(dim_state, 4, 7)] = (Ldoub) (-Cbn[index_3(3, 0, 0)]);//d_omega_x
+		filter.A[index_3(dim_state, 4, 8)] = (Ldoub) (-Cbn[index_3(3, 0, 1)]);//d_omega_y
+		filter.A[index_3(dim_state, 4, 9)] = (Ldoub) (-Cbn[index_3(3, 0, 2)]);//d_omega_z
 		//Phi_oy
 		filter.A[index_3(dim_state, 5, 0)] = (Ldoub) -U * sin(Coordinates[0]);//; //varphi
 		filter.A[index_3(dim_state, 5, 1)] = (Ldoub) 0; //lambda
@@ -618,11 +621,11 @@ int main(int argc, char *argv[])
 		// filter.A[index_3(dim_state, 7, 5)] = (Ldoub) 0; //Voz
 		filter.A[index_3(dim_state, 5, 4)] = (Ldoub) - omo[2]; //Phi_ox
 		filter.A[index_3(dim_state, 5, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 5, 6)] = (Ldoub) omo[0]; //Phi_oz
-		filter.A[index_3(dim_state, 5, 6)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
-		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
-		// filter.A[index_3(dim_state, 5, 9)] = (Ldoub) (-Cbn[index_3(3, 1, 2)]); //d_omega_z
-		#if 0
+		filter.A[index_3(dim_state, 5, 6)] = (Ldoub) omo[0]; //Phi_oz
+		filter.A[index_3(dim_state, 5, 7)] = (Ldoub) (-Cbn[index_3(3, 1, 0)]); //d_omega_x
+		filter.A[index_3(dim_state, 5, 8)] = (Ldoub) (-Cbn[index_3(3, 1, 1)]); //d_omega_y
+		filter.A[index_3(dim_state, 5, 9)] = (Ldoub) (-Cbn[index_3(3, 1, 2)]); //d_omega_z
+		#if 1
 		//Phi_oz
 		filter.A[index_3(dim_state, 6, 0)] = (Ldoub) U * cos(Coordinates[0]) + V[0]/(R*pow(cos(Coordinates[0]),2));//; //varphi
 		filter.A[index_3(dim_state, 6, 1)] = (Ldoub) 0; //lambda
@@ -638,33 +641,33 @@ int main(int argc, char *argv[])
 		filter.A[index_3(dim_state, 6, 9)] = (Ldoub) (-Cbn[index_3(3, 2, 2)]); //d_omega_z
 		#endif
 		//Delta omega_x
-		filter.A[index_3(dim_state, 6, 0)] = (Ldoub) 0; //varphi
-		filter.A[index_3(dim_state, 6, 1)] = (Ldoub) 0; //lambda
-		// filter.A[index_3(dim_state, 8, 2)] = (Ldoub) 0; //height
-		filter.A[index_3(dim_state, 6, 2)] = (Ldoub) 0; //Vox
-		filter.A[index_3(dim_state, 6, 3)] = (Ldoub) 0; //Voy
-		// filter.A[index_3(dim_state, 8, 5)] = (Ldoub) 0; //Voz
-		filter.A[index_3(dim_state, 6, 4)] = (Ldoub) 0; //Phi_ox
-		filter.A[index_3(dim_state, 6, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 6, 6)] = (Ldoub) 0; //Phi_oz
-		filter.A[index_3(dim_state, 6, 6)] = (Ldoub) 0; //d_omega_x
-		filter.A[index_3(dim_state, 6, 7)] = (Ldoub) 0; //d_omega_y
-		// filter.A[index_3(dim_state, 6, 9)] = (Ldoub) 0; //d_omega_z
-		
-		/*Delta omega_y*/
 		filter.A[index_3(dim_state, 7, 0)] = (Ldoub) 0; //varphi
 		filter.A[index_3(dim_state, 7, 1)] = (Ldoub) 0; //lambda
-		// filter.A[index_3(dim_state, 9, 2)] = (Ldoub) 0; //height
+		// filter.A[index_3(dim_state, 8, 2)] = (Ldoub) 0; //height
 		filter.A[index_3(dim_state, 7, 2)] = (Ldoub) 0; //Vox
 		filter.A[index_3(dim_state, 7, 3)] = (Ldoub) 0; //Voy
-		// filter.A[index_3(dim_state, 9, 5)] = (Ldoub) 0; //Voz
+		// filter.A[index_3(dim_state, 8, 5)] = (Ldoub) 0; //Voz
 		filter.A[index_3(dim_state, 7, 4)] = (Ldoub) 0; //Phi_ox
 		filter.A[index_3(dim_state, 7, 5)] = (Ldoub) 0; //Phi_oy
-		// filter.A[index_3(dim_state, 8, 6)] = (Ldoub) 0; //Phi_oz
-		filter.A[index_3(dim_state, 7, 6)] = (Ldoub) 0; //d_omega_x
-		filter.A[index_3(dim_state, 7, 7)] = (Ldoub) 0; //d_omega_y
-		// filter.A[index_3(dim_state, 8, 9)] = (Ldoub) 0; //d_omega_z
-		#if 0
+		filter.A[index_3(dim_state, 7, 6)] = (Ldoub) 0; //Phi_oz
+		filter.A[index_3(dim_state, 7, 7)] = (Ldoub) 0; //d_omega_x
+		filter.A[index_3(dim_state, 7, 8)] = (Ldoub) 0; //d_omega_y
+		filter.A[index_3(dim_state, 7, 9)] = (Ldoub) 0; //d_omega_z
+		
+		/*Delta omega_y*/
+		filter.A[index_3(dim_state, 8, 0)] = (Ldoub) 0; //varphi
+		filter.A[index_3(dim_state, 8, 1)] = (Ldoub) 0; //lambda
+		// filter.A[index_3(dim_state, 9, 2)] = (Ldoub) 0; //height
+		filter.A[index_3(dim_state, 8, 2)] = (Ldoub) 0; //Vox
+		filter.A[index_3(dim_state, 8, 3)] = (Ldoub) 0; //Voy
+		// filter.A[index_3(dim_state, 9, 5)] = (Ldoub) 0; //Voz
+		filter.A[index_3(dim_state, 8, 4)] = (Ldoub) 0; //Phi_ox
+		filter.A[index_3(dim_state, 8, 5)] = (Ldoub) 0; //Phi_oy
+		filter.A[index_3(dim_state, 8, 6)] = (Ldoub) 0; //Phi_oz
+		filter.A[index_3(dim_state, 8, 7)] = (Ldoub) 0; //d_omega_x
+		filter.A[index_3(dim_state, 8, 8)] = (Ldoub) 0; //d_omega_y
+		filter.A[index_3(dim_state, 8, 9)] = (Ldoub) 0; //d_omega_z
+		#if 1
 		//Delta omega_z
 		filter.A[index_3(dim_state, 9, 0)] = (Ldoub) 0; //varphi
 		filter.A[index_3(dim_state, 9, 1)] = (Ldoub) 0; //lambda
@@ -708,18 +711,18 @@ int main(int argc, char *argv[])
 		// как было до этого
 		int pow_h = 1;
 		//Phi_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
-		// filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
 		//Phi_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
-		// filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
-		#if 0
-		//Phi_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
-		// filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
+		#if 1
+		//Phi_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
 		#endif
 	#endif
 #if 0
@@ -895,10 +898,10 @@ int main(int argc, char *argv[])
 			// fprintf(estimations, "Vup,");			// 5
 			fprintf(estimations, "Phi_e,");			// 6
 			fprintf(estimations, "Phi_n,");			// 7
-			// fprintf(estimations, "Phi_z,");			// 8
+			fprintf(estimations, "Phi_z,");			// 8
 			fprintf(estimations, "d_omega_x,");		// 9
 			fprintf(estimations, "d_omega_y,");		// 10
-			// fprintf(estimations, "d_omega_z,");		// 11
+			fprintf(estimations, "d_omega_z,");		// 11
 			fprintf(estimations, "d_Psi,");			// 12
 			fprintf(estimations, "d_Roll,");		// 13
 			fprintf(estimations, "d_Pitch,");		// 14

@@ -25,14 +25,14 @@ void alignment(/*входные*/Ldoub *Ab, Ldoub *Omb, Ldoub *MeanAb, Ldoub *Me
 	Ldoub res1=0, err1=0, res2=0, err2=0;
 	TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 2)], res1, err1);
 	TwoProduct(Cbn[index_3(3, 2, 1)], Cbn[index_3(3, 1, 2)], res2, err2);
-	Cbn[index_3(3, 0, 0)] = (Ldoub) res1 + err1 + res2 + err2;
+	Cbn[index_3(3, 0, 0)] = (Ldoub) res1 + err1 - (res2 + err2);
 	res1=0; err1=0; res2=0; err2=0;
-	TwoProduct( Cbn[index_3(3, 1, 2)], Cbn[index_3(3, 2, 0)], res1, err1);
-	TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 2)], res2, err2);
-	Cbn[index_3(3, 0, 1)] = (Ldoub) res1 + err1 - (res2 + err2);
+	TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 2)], res1, err1);
+	TwoProduct( Cbn[index_3(3, 2, 0)], Cbn[index_3(3, 1, 2)], res2, err2);
+	Cbn[index_3(3, 0, 1)] = (Ldoub) -(res1 + err1) + (res2 + err2);
 	res1=0; err1=0; res2=0; err2=0;
 	TwoProduct(Cbn[index_3(3, 1, 0)], Cbn[index_3(3, 2, 1)], res1, err1);
-	TwoProduct(Cbn[index_3(3, 1, 1)], Cbn[index_3(3, 2, 0)], res2, err2);
-	Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 + res2 + err2;
+	TwoProduct(Cbn[index_3(3, 2, 0)], Cbn[index_3(3, 1, 1)], res2, err2);
+	Cbn[index_3(3, 0, 2)] = (Ldoub) res1 + err1 - (res2 + err2);
 	Matr2Quat(Cbn, Qf);
 }
