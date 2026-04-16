@@ -113,7 +113,7 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
 		}
-		Omb[0] += 1.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]); //если только этот дрейф, то у меня больше ошибка по крену, а должна быть по тангажу, не в этом ли корень всех бед
+		Omb[0] += 0.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]); //Внимание!! при гирокомпосировании балансировка восточного дерйфа! если только этот дрейф, то у меня больше ошибка по крену, а должна быть по тангажу, не в этом ли корень всех бед
 		Omb[1] += 1.*(AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1]); //если только этот дрейф, ФК чувсвует и оценивает правильно
 		Omb[2] += 1.*(AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2]);
 		//добавление шума к показаниям СНС
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
 		{
 			if (AlignmentContinue)
 			{
-			#if 1 // идеальная выставка с нулевыми углами курса, крена и тангажа
+			#if 0 // идеальная выставка с нулевыми углами курса, крена и тангажа
 				printf("Идеальная выставка\n");
 				for (int i=0; i<3; i++)
 				{
@@ -440,9 +440,16 @@ int main(int argc, char *argv[])
 				
 				Ldoub c0 = (Ldoub) sqrt(Cbn[index_3(3, 2, 0)]* Cbn[index_3(3, 2, 0)] + Cbn[index_3(3, 2, 2)]*Cbn[index_3(3, 2, 2)]);
 				// Вычисление углов ориентации
-				Heading = (Ldoub) atan2(Cbn[index_3(3, 0, 1)], Cbn[index_3(3, 1, 1)]);
 				Roll = (Ldoub) - atan2(Cbn[index_3(3, 2, 0)], Cbn[index_3(3, 2, 2)]);
 				Pitch = (Ldoub) atan2(Cbn[index_3(3, 2, 1)], c0);
+
+				#if 1 //выставка по ЗК (заданному курсу)
+				MatrOB(H0, Roll, Pitch, Cbn, 3);//получим матрицу из опорной в всязанную (а нам нужна обратная, т.е транспонированная)
+				Transpose(Cbn, 3); // транспонируем, то есть обращаем
+				#endif
+				Heading = (Ldoub) atan2(Cbn[index_3(3, 0, 1)], Cbn[index_3(3, 1, 1)]);
+
+
 				// вычисление ошибок выставки
 				DeltaRoll = (StdAb[0] * MeanAb[2] - StdAb[2] * MeanAb[0])/(MeanAb[2]*MeanAb[2] + MeanAb[0]*MeanAb[0]);
 				DeltaPitch = (StdAb[1])/sqrt(g*g - MeanAb[1]*MeanAb[1]);
