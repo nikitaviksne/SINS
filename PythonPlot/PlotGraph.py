@@ -4,6 +4,20 @@ import matplotlib.pyplot as plt
 import sys #для приема имени файла для построения через аргумент команды
 import os
 
+'''
+plt.rcParams.update({
+    "pgf.texsystem": "lualatex", #"pdflatex",  # или "xelatex", "lualatex"
+    "text.usetex": True,
+    "pgf.rcfonts": False
+})
+'''
+
+plt.rcParams['savefig.dpi'] = 600 # Выбор значения DPI зависит от назначения графика: 
+# 72–96 DPI — для веб-страниц и экранного отображения; 
+# 150 DPI — для базовых презентаций и внутренних документов; 
+# 300 DPI — для публикаций, профессиональных отчётов и печати; 
+# 600+ DPI — для научных публикаций и высококачественной печати. 
+
 def saveFigure(fig, path):
     if (savefig):
         #проверяем существование директории, если не существует, создаем
@@ -33,7 +47,7 @@ time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #
 round = 100
 
 '''Ошибки линейный скоростей'''
-fig1, (fig1_ax1, fig1_ax2, fig1_ax3) = plt.subplots(1, 3)
+fig1, (fig1_ax1, fig1_ax2, fig1_ax3) = plt.subplots(nrows = 1, ncols = 3)
 # Восточная составляющая
 fig1.suptitle("Ошибки скоростей")
 fig1_ax1.set_title("Ошибка восточной скорости");
@@ -62,7 +76,7 @@ fig1_ax3.grid(True)
 #fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
 
 '''Углы ориентации'''
-fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(3, 1)
+fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(nrows = 1, ncols = 3)
 fig2.suptitle("Углы")
 # Угол курса
 fig2_ax1.set_title("Угол курса");
@@ -78,7 +92,7 @@ fig2_ax2.set_xlabel("Мин")
 fig2_ax2.set_ylabel("Угл. мин")
 fig2_ax2.plot(time, np.round(np.rad2deg(data["Roll"])*60,round), label="$\gamma$");
 fig2_ax2.plot(time, np.round(np.rad2deg(estimations["d_Roll"])*60,round), label="$\hat{\Delta\gamma}$");
-fig2_ax2.set_ylim(-0.5, 0.9)
+fig2_ax2.set_ylim(-1.5, 2)
 fig2_ax2.legend(loc="best")
 fig2_ax2.grid(True)
 # Угол тангажа
@@ -87,7 +101,7 @@ fig2_ax3.set_xlabel("Мин")
 fig2_ax3.set_ylabel("Угл. мин")
 fig2_ax3.plot(time, np.round(np.rad2deg(data["Pitch"])*60,round), label="$\\theta$");
 fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label="$\hat{\Delta\\theta}$");
-fig2_ax3.set_ylim(-0.5, 2)
+fig2_ax3.set_ylim(-2, 1.5)
 fig2_ax3.legend(loc="best")
 fig2_ax3.grid(True)
 
@@ -115,7 +129,7 @@ del(flf_alpha[0][0])
 del(flf_alpha[1][0])
 
 '''Оценки дрейфов гироскопов'''
-fig3, (fig3_ax1, fig3_ax2, fig3_ax3) = plt.subplots(3, 1)
+fig3, (fig3_ax1, fig3_ax2, fig3_ax3) = plt.subplots(nrows = 1, ncols = 3)
 # Восточное направление
 fig3.suptitle("Оценка скоростей дрейфов гироскопов")
 fig3_ax1.set_title("Оценка скоростей дрейфа гироскопа канала X")

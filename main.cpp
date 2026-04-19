@@ -113,7 +113,7 @@ int Readfile(FILE* is, int numRes /*должное количество счит
 		{
 			Ab[ii] += AllowBiasAcc*BiasAb[ii] + AllowRandAcc*RandAb[ii];
 		}
-		Omb[0] += 0.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]); //Внимание!! при гирокомпосировании балансировка восточного дерйфа! если только этот дрейф, то у меня больше ошибка по крену, а должна быть по тангажу, не в этом ли корень всех бед
+		Omb[0] += 1.*(AllowBiasGyr*BiasOmb[0] + AllowRandGyr*RandOmb[0]); //Внимание!! при гирокомпосировании балансировка восточного дерйфа! если только этот дрейф, то у меня больше ошибка по крену, а должна быть по тангажу, не в этом ли корень всех бед
 		Omb[1] += 1.*(AllowBiasGyr*BiasOmb[1] + AllowRandGyr*RandOmb[1]); //если только этот дрейф, ФК чувсвует и оценивает правильно
 		Omb[2] += 1.*(AllowBiasGyr*BiasOmb[2] + AllowRandGyr*RandOmb[2]);
 		//добавление шума к показаниям СНС
@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
 					printf("%.10Lf, ", Cbn[iii]);
 				printf("]\n");
 				Qf.print();
-				Quat2Matr(Qf, Cbn);//проверка правильности работы функции
+				// Quat2Matr(Qf, Cbn);//проверка правильности работы функции
 
 				printf("Cbn после перевода из кватерниона\n");
 				printf("[");
@@ -446,6 +446,7 @@ int main(int argc, char *argv[])
 				#if 1 //выставка по ЗК (заданному курсу)
 				MatrOB(H0, Roll, Pitch, Cbn, 3);//получим матрицу из опорной в всязанную (а нам нужна обратная, т.е транспонированная)
 				Transpose(Cbn, 3); // транспонируем, то есть обращаем
+				Matr2Quat(Cbn, &Qf);
 				#endif
 				Heading = (Ldoub) atan2(Cbn[index_3(3, 0, 1)], Cbn[index_3(3, 1, 1)]);
 
@@ -473,7 +474,7 @@ int main(int argc, char *argv[])
 				MulMatrD(Cib, gravity, ErrAcc,3,3,1); //здесь ErrAcc как временная матрица, а Cib=(Cbn)^t в начальный момент времени
 				for (int iii=0; iii<3; ++iii)
 					ErrAcc[iii] -= MeanAb[iii]; //теперь ErrAcc есть ошибки акселерометров
-#if 1
+#if 0
 				//начальные значения ошибок ориентации (для вектора состояния)
 				// x0[4] = -MeanAb[1]/g;//1e-4/g;
 				// x0[5] = MeanAb[0]/g;//-1e-4/g;
