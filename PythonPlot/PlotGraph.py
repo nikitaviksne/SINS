@@ -10,7 +10,7 @@ plt.rcParams.update({
     "text.usetex": True,
     "pgf.rcfonts": False
 })
-'''
+# '''
 
 plt.rcParams['savefig.dpi'] = 600 # Выбор значения DPI зависит от назначения графика: 
 # 72–96 DPI — для веб-страниц и экранного отображения; 
@@ -18,15 +18,16 @@ plt.rcParams['savefig.dpi'] = 600 # Выбор значения DPI зависи
 # 300 DPI — для публикаций, профессиональных отчётов и печати; 
 # 600+ DPI — для научных публикаций и высококачественной печати. 
 
-def saveFigure(fig, path):
+def saveFigure(fig, path, format):
     if (savefig):
         #проверяем существование директории, если не существует, создаем
         if (not os.path.exists(savefig_path_dir)):  
             os.makedirs(savefig_path_dir, exist_ok=True)
         
-        fig.savefig(path)
+        fig.savefig(path, format=format)
 
 plt.rcParams['axes.unicode_minus'] = False # чтобы в трассировке курсора присутсвовал знак минус, а не его представление в юникоде \u2112
+plt.rcParams.update({'font.size': 14})  # Устанавливает базовый размер шрифта для всего графика
 
 path_nav_sol = sys.argv[1]
 path_est = sys.argv[2]
@@ -50,7 +51,7 @@ round = 100
 fig1, (fig1_ax1, fig1_ax2, fig1_ax3) = plt.subplots(nrows = 1, ncols = 3)
 # Восточная составляющая
 fig1.suptitle("Ошибки скоростей")
-fig1_ax1.set_title("Ошибка восточной скорости");
+fig1_ax1.set_title("Ошибка восточной\nскорости");
 fig1_ax1.set_xlabel("мин")
 fig1_ax1.set_ylabel("м/с")
 fig1_ax1.plot(time, np.round(data["d_VE"], round), label="$\Delta$ Ve");
@@ -58,7 +59,7 @@ fig1_ax1.plot(time, np.round(estimations["Ve"], round), linestyle='--', label="$
 fig1_ax1.legend(loc="best")
 fig1_ax1.grid(True)
 # Северная составляющая
-fig1_ax2.set_title("Ошибка северной скорости");
+fig1_ax2.set_title("Ошибка северной\nскорости");
 fig1_ax2.set_xlabel("мин")
 fig1_ax2.set_ylabel("м/с")
 fig1_ax2.plot(time, np.round(data["d_VN"],round), label="$\Delta$ Vn");
@@ -66,14 +67,20 @@ fig1_ax2.plot(time, np.round(estimations["Vn"],round), linestyle='--', label="$\
 fig1_ax2.legend(loc="best")
 fig1_ax2.grid(True)
 # Вертикальная составляющая
-fig1_ax3.set_title("Ошибка вертикальной скорости");
+fig1_ax3.set_title("Ошибка вертикальной\nскорости");
 fig1_ax3.set_xlabel("мин")
 fig1_ax3.set_ylabel("м/с")
 fig1_ax3.plot(time, np.round(data["d_VUp"],round), label="$\Delta$ V_{up}");
 # fig1_ax3.plot(time, np.round(estimations["Vup"],round), linestyle='--', label="$\hat{\Delta V_{up}}$"); #
 fig1_ax3.legend(loc="best")
 fig1_ax3.grid(True)
-#fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
+fig1.tight_layout()
+# разворот на весь экран
+# figManager = plt.get_current_fig_manager()
+# figManager.window.showMaximized()
+# fig1.canvas.manager.full_screen_toggle() # делаем полноэкранный режим, чтобы сохранялись кортинки в нормальном размере
+# manager = plt.get_current_fig_manager()
+# manager.window.state('zoomed')
 
 '''Углы ориентации'''
 fig2, (fig2_ax1, fig2_ax2, fig2_ax3) = plt.subplots(nrows = 1, ncols = 3)
@@ -231,11 +238,11 @@ fig35_ax2.grid(True)
 
 
 plt.show()
-
-'''производим сохранение всех картинок в полноэкранном формате'''
-saveFigure(fig1, savefig_path_dir + "/Ошибки скоростей.jpg")
-saveFigure(fig2, savefig_path_dir + "/Углы ориентации.jpg")
-saveFigure(fig3, savefig_path_dir + "/Оценки дрейфов гироскопов.jpg")
+if (savefig):
+    '''производим сохранение всех картинок в полноэкранном формате'''
+    saveFigure(fig1, savefig_path_dir + "/Ошибки_скоростей.pgf", format='pgf')
+    saveFigure(fig2, savefig_path_dir + "/Углы_ориентации.pgf", format='pgf')
+    saveFigure(fig3, savefig_path_dir + "/Оценки_дрейфов_гироскопов.pgf", format='pgf')
 
 exit();
 
