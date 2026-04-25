@@ -942,6 +942,22 @@ int main(int argc, char *argv[])
 		
 		fflush(estimations);
 #endif
+
+#if 1 
+		//Запись в файл коэффициентов усиления фильтра Калмана
+		static FILE* KalmanK;
+		if(!KalmanK)
+		{
+			KalmanK=fopen("./data/Kalman_koeff.csv","wt"); //
+		}
+		for (int i =0; i< filter.getDimX(); i++)
+			for (int j =0; j< filter.getDimZ(); j++)
+			{
+				fprintf(KalmanK, "%.10e; ", filter.K[index_3(filter.getDimZ(), i, j)]);
+			}
+		fprintf(KalmanK, "\n");
+		fflush(KalmanK);
+#endif
 	} //чтение из файла while( !in.eof())
 	printf("Алгоритм ИНС закончил моделирование\n");
 	return 0;
