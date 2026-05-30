@@ -19,6 +19,7 @@ target_include_directories(lclib PUBLIC ${SOURCE_LIB})
 set(Headers_SINS 
 	SINS_Algorithms/
 	include/
+	/home/nikita/Документы/CLibraries/alglib-cpp-v4.04.0/src/		
 	)
 #message(STATUS Headers_SINS, ${Headers_SINS})
 set(Source_SINS 

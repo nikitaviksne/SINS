@@ -1,5 +1,6 @@
 #include "SolveNav.h"
 #include "std.h"
+#include "ap.h"
 #include "matrix.h"
 #include <cmath>
 
@@ -9,7 +10,7 @@
 #include <stdio.h>
 #endif
 
-void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* Omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, Ldoub* ErrVins, bool allowCorr)
+void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* Omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, alglib::real_1d_array ErrVins, bool allowCorr)
 {
     MulMatrD(Cbn, Wp, Wo, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Wo -- уже не ускорения, а приращение скоростей
 
@@ -49,10 +50,19 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	
 	for (int iii=0; iii < 2; ++iii)	
 	{
-		V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] + allowCorr * k1 * ErrVins[iii])*h; // Ve 
+		V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] )*h; // Ve 
 	}
-		const Ldoub g (9.81);
-		// V[2] = V[2] + Wo[2] - (1*aCoriolis[2] + g)*h;
+
+	if (allowCorr)
+	{
+		for (int i =0; i< 2; ++i)
+		{
+			V[i] -= ErrVins[2+i]; //+ allowCorr * k1 * ErrVins[iii]*h
+		}
+	}
+
+	const Ldoub g (9.81);
+	// V[2] = V[2] + Wo[2] - (1*aCoriolis[2] + g)*h;
 	
 	
 	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))*h;

@@ -48,7 +48,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/PythonPlot/PlotGraph.py",
-            "args": ["data/Nav_res.csv", "data/Kalman_est.csv", "PythonPlot/Images/x[6]_0"],
+            "args": ["data/Nav_res.csv", "data/Kalman_est.csv"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

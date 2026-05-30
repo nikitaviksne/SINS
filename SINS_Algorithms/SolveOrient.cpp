@@ -1,4 +1,5 @@
 #include "SolveOrient.h"
+#include "ap.h"
 #include "std.h"
 #include "matrix.h"
 #include <cmath>
@@ -8,7 +9,7 @@
 #include <stdio.h>
 #endif
 
-void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw, Ldoub k2, Ldoub* DVerr, bool allowCorr)
+void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldoub* Coordinates, Ldoub* Omo, Ldoub* omo, Ldoub* V, Ldoub phi0, Ldoub Rphi, Ldoub Rlambda, int freq, Ldoub h, const Ldoub U, int iter, bool& sw, Ldoub k2, alglib::real_1d_array ErrPhi, bool allowCorr)
 {
 #if 0
     Ldoub Thet4[3] = {0}; //Вектор Эйлера
@@ -201,6 +202,22 @@ void SolveOrient(Ldoub* Omb, quaternion* Qf, Ldoub* Cbn, Ldoub* Orientation, Ldo
 	Qf->z = tempQuat.z;
 
 	Qf->normalize(1e-6);
+
+	if (allowCorr)
+	{
+		//составляем корректирующий кватернион
+		quaternion Qcorr_conj(1, -sin(ErrPhi[4]), -sin(ErrPhi[5]), -sin(ErrPhi[6]));
+
+		//множаем сопряженный корректирующий справа (или слева?) на финальный
+		quaternion tempQuat = Qcorr_conj * (*Qf);
+		Qf->w = tempQuat.w;
+		Qf->x = tempQuat.x;
+		Qf->y = tempQuat.y;
+		Qf->z = tempQuat.z;
+
+		//еще раз нормализуем
+		Qf->normalize(1e-6);
+	}
 
 	Quat2Matr(Qf, Cbn); //пересчет кватерниона в матрицу
 

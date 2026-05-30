@@ -4,6 +4,19 @@ docker run --rm -v "$(pwd)":/home/user/work latex-python
 Для проброса экрана полная команда
 docker run --rm -e DISPLAY=unix$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$(pwd)":/home/user/work latex-python
 
-Для интерактивного режима добавить: -ti /bin/bash
+Для интерактивного режима переопределить комманду по умолчанию (ENTRYPOINT): `--entrypoint /bin/bash `
 
+```
 python PythonPlot/PlotGraph.py data/Nav_res.csv data/Kalman_est.csv /dev/null
+```
+
+Полная комманда для запуска контейнера с примонтированной директорией с проектом диссертации Tex:
+
+```
+docker run --rm -v "$(pwd)":/home/user/work -v ~/Документы/Latex/Dissertation:/home/user/work/Dissertation -ti --entrypoint /bin/bash latex-python
+```
+
+```
+python3 PythonPlot/PlotGraph.py data/Nav_res.csv data/Kalman_est.csv --SaveDir Dissertation/Documents/Pictures/
+```
+для созранения в PGF добавить флаг --PGF

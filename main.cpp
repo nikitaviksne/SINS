@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 
 	Ldoub kcor1 (0.006138995628986877); // метод наименьшей дисперсии () программой на python
 	Ldoub kcor2 (11.54438988378206); // метод наименьшей дисперсии () программой на python
-	bool allowCorr (false); //разрешение на коррекцию
+	bool allowCorr = false; //разрешение на коррекцию
 	// Чтение из файла ускорений и угловых скоростей
 
 
@@ -338,8 +338,8 @@ int main(int argc, char *argv[])
 	const int dim_sense (2 + 2); //размер вектора измерения (+ координаты GPS)
 	const int dim_input_noise (3); //размер матрицы входных шумов Q
 	//*/
-	// UsualKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
-	AdaptiveRKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
+	UsualKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
+	// AdaptiveRKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
 	Ldoub x0[dim_state] = {0}; //Начальные оценочные значения дрейфов
 	Ldoub H[dim_sense*dim_state] = {0}; //матрица наблюдения
 	#if 1 // вектор состояния 6
@@ -490,35 +490,14 @@ int main(int argc, char *argv[])
 		Ldoub Wp[3] = {0}; //проинтегрированные малые приращения. Начальные значения обнуляются на каждом такте быстрого цикла (с частотой 100 Гц)
 
 		//Включение и выключение коррекции
-	#if 0
+	#if 1
 		if (cur_time == int(60*60/h) )
 			allowCorr = true;
 		if (cur_time == int(70*60/h) )
 			allowCorr = false;
 	#endif
 		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps, V0);
-		/*Далее идет 100 Гц такт*/
-		for (int iii=0; iii<3; iii++)
-			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
-		/*Решение задачи навигации*/
-		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, ErrVins, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
-		//Решение задачи ориентации
-		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, ErrVins, allowCorr); //из одноименного заголовочного файла
 		
-		#if 0
-		V0[0] = Vabs*sin(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
-		V0[1] = Vabs*cos(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
-		#endif
-		// инкремент тактов
-		++cur_time;
-		#if 0
-		for (int iii=0; iii<3; ++iii)
-		{
-			for (int jjj=0; jjj<3; jjj++)
-				printf("%.10Lf\t", Cbn[index_3(3, iii, jjj)]);
-			printf("\n");
-		}
-		#endif
 		/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
@@ -737,7 +716,7 @@ int main(int argc, char *argv[])
 		printf("G\n");
 		filter.Print2dMatr(filter.G, filter.getDimX(), filter.getDimQ());
 
-		#endif 
+#endif 
 		if (!filter.init) //Если ранее не было инициализации, то инициализируем
 		{
 			filter.Init(x0, q, r, H);
@@ -777,6 +756,40 @@ int main(int argc, char *argv[])
 		#endif
 		}
 	#endif
+	/*Далее идет 100 Гц такт*/
+		for (int iii=0; iii<3; iii++)
+			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
+		/*Решение задачи навигации*/
+		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, filter.x, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
+		//Решение задачи ориентации
+		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, filter.x, allowCorr); //из одноименного заголовочного файла
+		
+		if (allowCorr) filter.Reset(); //если (пока) разрешена коррекция, сбрасываем фильтр Калмана
+
+#if 0
+		if (cur_time == 42*60*freq) 
+		{
+			allowCorr = true; //разрешаем коррекцию
+		}
+		if (cur_time == 42*60*freq + 1) 
+		{
+			allowCorr = false; //запрещаем коррекцию
+		}
+#endif	
+		#if 0
+		V0[0] = Vabs*sin(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
+		V0[1] = Vabs*cos(Orientation[0]); //Не нужно, если из файла читаются идеальные скорости от GPS
+		#endif
+		// инкремент тактов
+		++cur_time;
+		#if 0
+		for (int iii=0; iii<3; ++iii)
+		{
+			for (int jjj=0; jjj<3; jjj++)
+				printf("%.10Lf\t", Cbn[index_3(3, iii, jjj)]);
+			printf("\n");
+		}
+		#endif
 		// Запись в файл навигационного решения (скорости, координаты, углы, ошибки по скоростям, ошибки по координатам)
 
 		static FILE* navig_res;
@@ -897,7 +910,7 @@ int main(int argc, char *argv[])
 		{
 			estimations=fopen("./data/Kalman_est.csv","wt"); //Timestamp,a_ll_x,a_ll_y,a_ll_z,omega_s_x,omega_s_y,omega_s_z,Ve_ins,Vn_ins,heading,roll,pitch,latitude,lingitude,Ve_gps,Vn_gps
 			// Шапка
-		#if 1 //Для вектора состояния размерности 10
+		#if 1 //Для вектора состояния размерности
 			fprintf(estimations, "varphi,");		// 0
 			fprintf(estimations, "lambda,");		// 1
 			// fprintf(estimations, "height,");		// 2
