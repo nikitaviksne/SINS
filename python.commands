@@ -17,6 +17,6 @@ docker run --rm -v "$(pwd)":/home/user/work -v ~/Документы/Latex/Disser
 ```
 
 ```
-python3 PythonPlot/PlotGraph.py data/Nav_res.csv data/Kalman_est.csv --SaveDir Dissertation/Documents/Pictures/
+python3 PythonPlot/PlotGraph.py data/Nav_res.csv data/Kalman_est.csv --SaveDir Dissertation/Documents/Pictures/ --PGF
 ```
-для созранения в PGF добавить флаг --PGF
+для созранения в PGF добавить флаг --PGF. Если без него, картинки будут сохраняться в формате PDF

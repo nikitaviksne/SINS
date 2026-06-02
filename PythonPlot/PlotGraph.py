@@ -282,6 +282,9 @@ fig2_ax3.plot(time, np.round(np.rad2deg(estimations["d_Pitch"])*60,round), label
 fig2_ax3.set_ylim(-2, 1.5)
 fig2_ax3.legend(loc="lower center")
 fig2_ax3.grid(True)
+if args.SaveDir:
+    fig2_path = os.path.join(args.SaveDir, "Углы_ориентации")
+    saveFigure(fig2, fig2_path, format_type='pdf' if not args.PGF else "pgf")
 
 '''Осредняем скорости дрейфов гироскопов и сглаживаем ФНЧ с T=100'''
 
@@ -363,6 +366,9 @@ fig3_ax3.plot(time, np.round(np.rad2deg(estimations["d_omega_z"]), round)*3600, 
 fig3_ax3.grid(True)
 fig3_ax3.legend(loc="lower center")
 # '''
+if args.SaveDir:
+    fig3_path = os.path.join(args.SaveDir, "Оценки_дрейфов_гироскопов")
+    saveFigure(fig3, fig3_path, format_type='pdf' if not args.PGF else "pgf")
 
 fig20, (fig20_ax1) = plt.subplots(ncols=1, nrows=1)
 fig20.suptitle("Скорости ИНС")
@@ -424,6 +430,50 @@ if args.SaveDir:
     fig35_path = os.path.join(args.SaveDir, "Траектория_с_цветом")
     saveFigure(fig35, fig35_path, format_type='pdf' if not args.PGF else "pgf")
 
+'''Дрейфы акселерометров'''
+fig40, (fig40_ax1, fig40_ax2, fig40_ax3) = plt.subplots(nrows = 1, ncols = 3, 
+                                                    figsize=set_size(width, fraction=0.9),
+                                                    constrained_layout=True, # Более продвинутый алгоритм распределения места
+                                                    sharey='row',
+                                                    )
+# fig40, (fig40_ax1, fig40_ax2, fig40_ax3) = plt.subplots(nrows = 1, ncols = 3, 
+#                                                     figsize=set_size(1080, 1920), constrained_layout=True # Более продвинутый алгоритм распределения места
+#                                                     )
+# Восточное направление
+fig40.suptitle("Оценка скоростей дрейфов акселерометров")
+fig40_ax1.set_title("Оценка скоростей\nдрейфа акселерометра \nканала X")
+fig40_ax1.set_xlabel("Мин")
+fig40_ax1.set_ylabel("м/(с^2)")
+fig40_ax1.set_ylim(-1e-4, 1e-2)
+fig40_ax1.plot(time, np.round(estimations["d_a_x"], round), label="$\delta a_x$");
+fig40.set_size_inches(set_size(width))
+# fig40_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
+# fig40_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
+fig40_ax1.grid(True)
+fig40_ax1.legend(loc="lower center")
+#дрейф северного акселерометра
+fig40_ax2.set_title("Оценка скоростей\nдрейфа акселерометра\nканала Y")
+fig40_ax2.set_xlabel("Мин")
+# fig40_ax2.set_ylabel("Град/час")
+# fig40_ax2.set_ylim(-0.25, 0.25)
+fig40_ax2.plot(time, np.round(estimations["d_a_y"]), round, label="$\delta a_y$");
+# fig40_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
+# fig40_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
+fig40_ax2.grid(True)
+fig40_ax2.legend(loc="lower center",)
+#дрейф вертикального акселерометра
+# '''
+fig40_ax3.set_title("Оценка скоростей\nдрейфа гироскопа\nканала Z")
+fig40_ax3.set_xlabel("Мин")
+# fig40_ax3.set_ylabel("Град/час")
+# fig40_ax3.set_ylim(-0.25, 0.25)
+fig40_ax3.plot(time, np.round(estimations["d_a_z"], round), label="$\delta a_z$");
+fig40_ax3.grid(True)
+fig40_ax3.legend(loc="lower center")
+# '''
+if args.SaveDir:
+    fig40_path = os.path.join(args.SaveDir, "Оценки_дрейфов_акселерометров")
+    saveFigure(fig40, fig40_path, format_type='pdf' if not args.PGF else "pgf")
 
 plt.show()
 

@@ -370,3 +370,14 @@ void AdaptiveRKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//
 		printf("\n");
 	}
 }
+
+void AdaptiveRKalman::Reset()//Сброс фильтра Калмана
+{
+	for (int i =0; i < dim_x; i++)
+	{
+		for (int j =0; j < dim_x; j++)
+		{
+		}
+		x[i] = 0;
+	}
+}
