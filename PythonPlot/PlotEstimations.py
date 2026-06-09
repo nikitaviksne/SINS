@@ -11,7 +11,7 @@ time = np.linspace(0, (data.iloc[:, 0].size - 1)/100/60, data.iloc[:, 0].size) #
 round = 100
 
 '''Оценки ошибок линейный скоростей'''
-fig1, (fig1_ax1, fig1_ax2) = plt.subplots(1, 2)
+fig1, (fig1_ax1, fig1_ax2, fig1_ax3) = plt.subplots(1, 3)
 # Восточная составляющая
 fig1.suptitle("Оценки скоростей")
 fig1_ax1.set_title("Оценка восточной скорости");
@@ -27,6 +27,13 @@ fig1_ax2.set_ylabel("м/с")
 fig1_ax2.legend(loc="best")
 fig1_ax2.plot(time, np.round(data["Vn"],round), label="Vn");
 fig1_ax2.grid(True)
+# Вертикальная составляющая
+fig1_ax3.set_title("Оценка северной скорости");
+fig1_ax3.set_xlabel("мин")
+fig1_ax3.set_ylabel("м/с")
+fig1_ax3.legend(loc="best")
+fig1_ax3.plot(time, np.round(data["Vn"],round), label="Vn");
+fig1_ax3.grid(True)
 
 
 '''Оценки ориентации'''
@@ -53,7 +60,7 @@ fig2_ax2.legend(loc="best")
 fig2_ax2.grid(True)
 
 '''Осредняем скорости дрейфов гироскопов и сглаживаем ФНЧ с T=100'''
-
+'''
 Tf = 1e6;
 alpha_f = 1e-4;
 mean = [[0],[0]] # среднее значение ФНЧ
@@ -74,6 +81,7 @@ del(flf[0][0])
 del(flf[1][0])
 del(flf_alpha[0][0])
 del(flf_alpha[1][0])
+#'''
 
 '''Оценки дрейфов гироскопов'''
 fig4, (fig4_ax1, fig4_ax2) = plt.subplots(2, 1)
@@ -85,7 +93,7 @@ fig4_ax1.set_ylabel("град/час")
 fig4_ax1.plot(time, np.round(np.rad2deg(data["d_omega_x"]), round)*3600, label="$\delta\omega_x$");
 # fig4_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
 # fig4_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
-fig4_ax1.plot(time, np.round(np.rad2deg(flf_alpha[0]), round)*3600, label="$\omega_{x\\alpha}^F$", alpha = 0.5);
+#fig4_ax1.plot(time, np.round(np.rad2deg(flf_alpha[0]), round)*3600, label="$\omega_{x\\alpha}^F$", alpha = 0.5);
 fig4_ax1.grid(True)
 fig4_ax1.legend(loc="best")
 #
@@ -95,7 +103,7 @@ fig4_ax2.set_ylabel("град/час")
 fig4_ax2.plot(time, np.round(np.rad2deg(data["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
 # fig4_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
 # fig4_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
-fig4_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y\\alpha}^F$", alpha = 0.5);
+#fig4_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y\\alpha}^F$", alpha = 0.5);
 fig4_ax2.grid(True)
 fig4_ax2.legend(loc="best")
 

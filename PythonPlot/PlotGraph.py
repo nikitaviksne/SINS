@@ -287,7 +287,7 @@ if args.SaveDir:
     saveFigure(fig2, fig2_path, format_type='pdf' if not args.PGF else "pgf")
 
 '''Осредняем скорости дрейфов гироскопов и сглаживаем ФНЧ с T=100'''
-
+'''
 Tf = 1e6;
 alpha_f = 1e-5;
 mean = [[0],[0]] # среднее значение ФНЧ
@@ -308,7 +308,7 @@ del(flf[0][0])
 del(flf[1][0])
 del(flf_alpha[0][0])
 del(flf_alpha[1][0])
-
+'''
 '''Оценки дрейфов гироскопов'''
 fig3, (fig3_ax1, fig3_ax2, fig3_ax3) = plt.subplots(nrows = 1, ncols = 3, 
                                                     figsize=set_size(width, fraction=0.9),
@@ -335,7 +335,7 @@ fig3_ax1.plot(time, np.round(np.rad2deg(estimations["d_omega_x"]), round)*3600, 
 fig3.set_size_inches(set_size(width))
 # fig3_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
 # fig3_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
-fig3_ax1.plot(time, np.round(np.rad2deg(flf_alpha[0]), round)*3600, label="$\omega_{x}^{F\\alpha}$");
+# fig3_ax1.plot(time, np.round(np.rad2deg(flf_alpha[0]), round)*3600, label="$\omega_{x}^{F\\alpha}$");
 fig3_ax1.grid(True)
 fig3_ax1.legend(loc="lower center")
 #дрейф северного гироскопа
@@ -353,7 +353,7 @@ fig3_ax2.axhline(y = -0.05*np.sin(np.deg2rad(50+90)) + 0.05*np.cos(np.deg2rad(50
 fig3_ax2.plot(time, np.round(np.rad2deg(estimations["d_omega_y"]), round)*3600, label="$\delta\omega_y$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
 # fig3_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
-fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y}^{F\\alpha}$");
+# fig3_ax2.plot(time, np.round(np.rad2deg(flf_alpha[1]), round)*3600, label="$\omega_{y}^{F\\alpha}$");
 fig3_ax2.grid(True)
 fig3_ax2.legend(loc="lower center",)
 #дрейф курсового гироскопа

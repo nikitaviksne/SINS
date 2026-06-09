@@ -48,16 +48,16 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	printf("aCoriolis[0] = %.8f aCoriolis[1] = %.8f aCoriolis[2] = %.8f\n", aCoriolis[0], aCoriolis[1], aCoriolis[2]);
 	#endif //dev
 	
-	for (int iii=0; iii < 2; ++iii)	
+	for (int iii=0; iii < 3; ++iii)	
 	{
 		V[iii] = V[iii] + Wo[iii] - (1*aCoriolis[iii] )*h; // Ve 
 	}
 
 	if (allowCorr)
 	{
-		for (int i =0; i< 2; ++i)
+		for (int i =0; i< 3; ++i)
 		{
-			V[i] -= ErrVins[2+i]; //+ allowCorr * k1 * ErrVins[iii]*h
+			V[i] -= ErrVins[3+i]; //+ allowCorr * k1 * ErrVins[iii]*h
 		}
 	}
 
@@ -67,6 +67,7 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
 	
 	Coordinates[0] += (Ldoub) (V[1]/(Rphi + Coordinates[2]))*h;
 	Coordinates[1] += (Ldoub) (V[0]/((Rlambda + Coordinates[2])*cos(Coordinates[0])))*h;
+	Coordinates[2] += (Ldoub) (V[2]) * h;
 
 	//Ошибки по скоростям в м/с и координатам в м
 	for (int iii=0; iii<3; ++iii)
