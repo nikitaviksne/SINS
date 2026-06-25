@@ -1,6 +1,7 @@
 #include "std.h"
 #include "mathematics.h"
 #include <stdio.h>
+#include "ap.h"
 
 void MulMatrD(Ldoub *A, Ldoub *B, Ldoub *C, int size1, int size2, int size3)
 {
@@ -56,6 +57,16 @@ void print2dMatr(Ldoub* A, int rows, int cols)
 	{
 		for(int jjj=0; jjj<cols; ++jjj)
 			printf("%.10Lf\t", A[index_3(cols, iii, jjj)]);
+		printf("\n");
+	}
+}
+
+void print2dMatr(const alglib::real_1d_array& A, int rows, int cols)
+{
+	for(int iii=0; iii<rows; ++iii)
+	{
+		for(int jjj=0; jjj<cols; ++jjj)
+			printf("%.10f\t", A[index_3(cols, iii, jjj)]);
 		printf("\n");
 	}
 }

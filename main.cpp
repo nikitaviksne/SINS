@@ -22,6 +22,114 @@
 #include <stdio.h>
 #endif
 
+#define MAX_LINE_SIZE 4096
+#define MAX_COLS 256
+
+const int MAX_SAT_USE = 10; //максимальное количество спутников, для которого будем брать измерения для коррекции БИНС
+const int PARAMETERS_PER_SAT = 1+1+3+3; /*количество параметров на один спутник (
+									псевдодальность
+									псевдоскорость
+									Координаты (X,Y,Z)
+									Средняя скорость на этапе измерений (Vx, Vy, Vz))*/
+
+// Структура для хранения имен заголовков
+extern int total_columns; // Определяется при чтении заголовка
+
+int total_columns = 0;
+
+// Функция для парсинга одной строки с учетом пустых полей (дыр)
+void parse_csv_line(char *line, int line_num, Ldoub* outIzm, int& nums) {
+    int numOfSat = 0; //количество спутников в этой строке (точнее количество столбцов с данными, потом поделим нацело на нужное число)
+    int col_index = 0;
+    char *start = line;
+    char *end;
+
+    // Цикл идет по всей строке, пока не кончатся символы или лимит столбцов
+    while (start && *start != '\0' && *start != '\r' && *start != '\n' && col_index < total_columns) {
+        end = strchr(start, ';');
+        
+        if (end) {
+            *end = '\0'; // Временно разделяем строку
+        }else {
+            // Если это самый последний столбец, принудительно отрезаем виндовской 0D 0A
+            start[strcspn(start, "\r\n")] = '\0';
+        }
+
+        // Убираем лишние пробелы по краям (если они есть)
+        while (*start == ' ') start++;
+        
+        // Если поле не пустое
+        if (strlen(start) > 0) {
+            if (col_index >= 1)
+			{
+                Ldoub temp = atof(start);
+                outIzm[(numOfSat)%(MAX_SAT_USE*PARAMETERS_PER_SAT)] = temp;
+                numOfSat ++;
+            }
+        }
+
+        // Переходим к следующему полю
+        if (end) {
+            start = end + 1;
+            col_index++;
+        } else {
+            start = NULL; // Достигли конца строки
+        }
+    }
+    nums = numOfSat/PARAMETERS_PER_SAT;
+}
+
+int readFile_IzmGnss(FILE* fp, Ldoub *outIzm) {
+    if (!fp) {
+        perror("Ошибка открытия файла");
+        return EXIT_FAILURE;
+    }
+
+    char line[MAX_LINE_SIZE];
+	static int line_num = 0;
+	if (!line_num)
+	{
+		// 1. Читаем и разбираем заголовок переменной длины
+		if (fgets(line, sizeof(line), fp)) {
+			line[strcspn(line, "\r\n")] = 0; // чистим перенос строки
+			
+			char *token = strtok(line, ";");
+			while (token && total_columns < MAX_COLS) {
+				total_columns++;
+				token = strtok(NULL, ";");
+			}
+			printf("Успешно прочитан заголовок. Обнаружено столбцов: %d\n\n", total_columns);
+		}
+		line_num++;
+	}
+
+    // 2. Читаем строки с данными
+    if (fgets(line, sizeof(line), fp)) {
+        // printf("Успешно (или нет) прочитана строка %s\n", line);
+        int res_sat = 0;
+        parse_csv_line(line, line_num, outIzm, res_sat);
+
+		/*
+		Считаем скорость (как приращение псевдодальности) 
+		*/
+		for (int i=0; i<res_sat; i++)
+		{
+			outIzm[i*PARAMETERS_PER_SAT + 5] -= outIzm[i*PARAMETERS_PER_SAT + 2];
+			outIzm[i*PARAMETERS_PER_SAT + 6] -= outIzm[i*PARAMETERS_PER_SAT + 3];
+			outIzm[i*PARAMETERS_PER_SAT + 7] -= outIzm[i*PARAMETERS_PER_SAT + 4];
+		}
+        line_num++;
+		return res_sat;
+    }
+	else
+	{
+		fclose(fp);
+		return -1;
+    	// return EXIT_SUCCESS;
+	}
+}
+
+
 void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 {
 	C[0] = (Ldoub) cos(R) * cos(H) + sin(R)*sin(H)* sin(P);
@@ -33,6 +141,20 @@ void MatrOB(Ldoub H, Ldoub R, Ldoub P, Ldoub* C, int size)
 	C[6] = (Ldoub) sin(R) * cos(H) - cos(R) * sin(H) * sin(P);
 	C[7] = (Ldoub) -sin(R) * sin(H) - cos(R) * cos(H) * sin(P);
 	C[8] = (Ldoub) cos(R) * cos(P);
+}
+
+void Matr_ECEF_Geodedic(Ldoub phi, Ldoub lambda, Ldoub* C)
+//матрица перехода из географической системы координат  в экваториальную (ECEF) (справа вектор в географической, слева получается в экватороиальной)
+{
+	C[0] = (Ldoub) -sin(lambda);
+	C[1] = (Ldoub) -cos(lambda) * sin(phi);
+	C[2] = (Ldoub) cos(lambda) * cos(phi);
+	C[3] = (Ldoub) cos(lambda);
+	C[4] = (Ldoub) - sin(lambda) * sin(phi);
+	C[5] = (Ldoub) sin(lambda) * cos(phi);
+	C[6] = (Ldoub) 0.0;
+	C[7] = (Ldoub) cos(phi);
+	C[8] = (Ldoub) sin(phi);	
 }
 
 bool ReadFile(std::ifstream &is, bool AllowBiasAcc, bool AllowBiasGyr, bool AllowRandAcc, bool AllowRandGyr, bool AllowRandVgps, Ldoub* Ab, Ldoub* Omb, Ldoub* Vgps)
@@ -227,17 +349,48 @@ void GeneratedSens(Ldoub *Ab, Ldoub *Omb, Ldoub Vabs, Ldoub H0, int cur_time, in
 	MulMatrD(Cnb, Omo, Omb, 3, 3, 1); // проекция угловых скоростей на связанные оси
 }
 #endif
+
+void Yacobi_ECEF_to_Geodedic(Ldoub phi, Ldoub lambda, Ldoub h, Ldoub* C)
+{
+	Ldoub N = a/sqrt(1 - pow(e*sin(phi),2)); //радиус крививизны первого вертикала
+	Ldoub M = (a*(1 - pow(e,2)))/pow(1 - pow(e*sin(phi),2), 3/2); //радиус кривизны меридиана
+	C[0] = -(M + h)*sin(phi)*cos(lambda);
+	C[1] =  -(N+h)*cos(phi)*sin(lambda);
+	C[2] = cos(phi)*cos(lambda);
+	C[3] = -(M + h)*sin(phi)*sin(lambda);
+	C[4] = (N+h)*cos(phi)*cos(lambda);
+	C[5] = cos(phi)*sin(lambda);
+	C[6] = (M + h)*cos(phi);
+	C[7] = 0;
+	C[8] = sin(phi);
+}
+
+void BLH_to_XYZ(Ldoub B, Ldoub L, Ldoub H, Ldoub a, Ldoub e, Ldoub &X, Ldoub &Y, Ldoub &Z)
+{
+	Ldoub N = a/sqrt(1 - pow(e*sin(B),2));
+	X = (N+H)*cos(B)*cos(L);
+	Y = (N+H)*cos(B)*sin(L);
+	Z = (N*(1-pow(e,2)) + H)*sin(B);
+};
+
+extern const Ldoub U = 7.27220521664304e-05;
+extern const Ldoub R = 6378400;
+extern const Ldoub g = 9.81;
+//ПЗ-90.11
+extern const Ldoub alpha = 1/298.257839303; //сжатие
+extern const Ldoub a = 6378136.;
+extern const Ldoub b = a - alpha*a;//6356856.;
+extern const Ldoub e = sqrt(1 - b*b/a/a);
+
+
+
+// extern const Ldoub e2 = 1- pow(b,2)/pow(a,a);
+
 int main(int argc, char *argv[])
 {
 	//инициализация необходимых переменных и констант
-	const Ldoub g = 9.81;
-	const Ldoub a = 6378245.;
-	const Ldoub b = 6356856.;
-	const Ldoub e = sqrt(1 - b*b/a/a);
-	const Ldoub R = 6400e3;
 	Ldoub nu2 = sqrt(g/R); // квадрат частоты Шуллера
 	const Ldoub pi = 3.141592653589793;
-	const Ldoub U = 7.27220521664304e-05;
 	const Ldoub rad2deg = 180./M_PI; // из градусов в час в радианы в секунду
 	const Ldoub deg2rad = 1./rad2deg;
 	Ldoub freq1 = 400.; // частота свехбыстрого цикла
@@ -248,7 +401,7 @@ int main(int argc, char *argv[])
 	int t_alignment = (int) 5*60*freq; // время выставки в тактах
 	Ldoub Rlambda;
 	Ldoub Rphi;
-	Ldoub phi0 = (Ldoub) 55*deg2rad;// и для моделирования
+	Ldoub phi0 = (Ldoub) 56.049202*deg2rad;// и для моделирования
 	int cur_time = 0; // текущий такт!! измерения
 	// Для моделирования показаний Ч.Э.
 	Ldoub H0 = (Ldoub) (strtod(argv[1], NULL))*deg2rad;
@@ -263,7 +416,7 @@ int main(int argc, char *argv[])
 	Ldoub Cnb[9];
 	MatrOB(H0, R0, P0, Cnb, 3); // матрица перехода из опорной в связанную
 	//Необходимое для выставки
-	Ldoub lambda0 = (Ldoub) 33*deg2rad;
+	Ldoub lambda0 = (Ldoub) 38.694939*deg2rad;
 	Ldoub DeltaHeading = 0, DeltaRoll = 0, DeltaPitch = 0;// ошибки выставки по курсу, крену и тангажу соответственно
 	Ldoub Heading = 0, Roll = 0, Pitch = 0;
 	bool AlignmentContinue = true; // для начала выставки
@@ -283,15 +436,21 @@ int main(int argc, char *argv[])
 	Ldoub Cin[9] = {1.,0,0,0,1.,0,0,0,1.}; //матрица перехода из инерцальной в опорную. Начальное знвчение -- единичная Cin(0)=E
 	Ldoub V0[3] = {(Ldoub) Vabs*sin(H0), (Ldoub) Vabs*cos(H0), 0}; // линейные скорости E; N; Up
 	Ldoub Err_V[3] = {0}; // ошибки по скоростям
-	Ldoub ErrVins[6] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок) (широта, долгота, Vx, Vy)
+	// Ldoub ErrVins[6] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок) (широта, долгота, Vx, Vy)
+	Ldoub ErrVins[(2*MAX_SAT_USE)*1] = {0}; // разница ошибок между ИНС и GPS (для корректирующих поправок) (Сначала координаты (N строк), затем скорости (N строк), итого 2N) (матриа-столбец)
 	// массивы для выходных значений
 	Ldoub V[3] = {(Ldoub) V0[0], (Ldoub) V0[1], 0}; // линейные скорости E; N; Up (на всякий случай, пока резерв)
 	Ldoub Coordinates[3] = {phi0, lambda0, 0}; // Географические кординаты: широта, долгота и высота
 	Ldoub CoordError[3] = {0}; // Ошибки в м (dE, dN)
 	Ldoub Orientation[3] = {0}; // Углы ориентации
 
-	Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
-	Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
+	Ldoub Izm[MAX_SAT_USE * PARAMETERS_PER_SAT] = {0}; // вектор измерений ГНСС (псевдодальности, псевдоскорости)
+
+	Rphi = pow(a,2) / sqrt(pow(a,2) * pow(cos(Coordinates[0]),2) + pow(b,2) * pow(sin(Coordinates[0]),2));
+	Rlambda = (pow(a,2) / sqrt(pow(a,2) * pow(sin(Coordinates[0]),2) + pow(b,2) * pow(cos(Coordinates[0]),2))) * pow(cos(Coordinates[0]),2);
+	// (a² / √(a² ⋅ sin²φ + b² ⋅ cos²φ)) × cos²φ
+	// Rlambda = (Ldoub) R/sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0]));
+	// Rphi = (Ldoub) R*(1. - e*e)/(sqrt(1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])) * (1.-e*e*sin(Coordinates[0])*sin(Coordinates[0])));
 
 	Ldoub Omo[3] = {-V0[1]/(Rphi + Coordinates[2]), V0[0]/(Rlambda + Coordinates[2]), V0[0]/(Rlambda + Coordinates[2])*tan(Coordinates[0])}; // Угловые скорости в опорных осях
 	Ldoub omo[3] = { Omo[0], Omo[1] +  U*cos(Coordinates[0]), Omo[2] + U*sin(Coordinates[0]) }; //переносные (вроде даже абсолютные) угловые скорости, вчисляются в решении задачи ориентации (SolveOrient)
@@ -330,12 +489,15 @@ int main(int argc, char *argv[])
 	std::ifstream in(argv[5], std::ios::binary);// !in.eof() //условие цикла while для бинарного файла
 	#define FILE_STREAM
 #endif
+	//файл с данными ГНСС
+	FILE *fileGNSS = fopen(argv[12], "r");
+
 	Ldoub resultV[2] = {0.};
 	Ldoub Verr1[3] = {0.}; // ошибки интегрирования ускорений
 	Ldoub Verr2[3] = {0.}; // ошибки накопления скоростей
 	///*
-	const int dim_state (8 + 2/*вертикальный канал*/ + 2/*координаты GPS*/ + 3/*дрейф акселерометров*/); //размер вектора состояния 
-	const int dim_sense (3/*скорости GPS*/ + 3/*координаты GPS*/ ); //размер вектора измерения
+	const int dim_state (8 + 2/*вертикальный канал*/ + 2/*координаты GPS*/ + 3/*дрейф акселерометров*/ + 2/*УМШВ и скорость УМШВ*/); //размер вектора состояния 
+	const int dim_sense (2*MAX_SAT_USE);// (3/*скорости GPS*/ + 3/*координаты GPS*/ ); //размер вектора измерения
 	const int dim_input_noise (3 + 3/*дрейф акселерометров*/); //размер матрицы входных шумов Q
 	//*/
 	// UsualKalman filter(dim_state, dim_sense, dim_input_noise, h/*шаг дискретизации*/); //Создаю объект фильтра Калмана 
@@ -349,7 +511,7 @@ int main(int argc, char *argv[])
 	H[index_3(dim_state, 3, 3)] = 1.; //Ve 
 	H[index_3(dim_state, 4, 4)] = 1.; //Vn n
 	H[index_3(dim_state, 5, 5)] = 1.; //Vup
-	print2dMatr(H, dim_sense, dim_state);
+	// print2dMatr(H, dim_sense, dim_state);
 
 	//Матрца ковариации входных шумов (модели)
 	Ldoub q[dim_input_noise * dim_input_noise] = {0};
@@ -505,7 +667,16 @@ int main(int argc, char *argv[])
 	#endif
 		res = Readfile(file, numRes, AllowBiasAcc, AllowBiasGyr, AllowRandAcc, AllowRandGyr, AllowRandVgps, AllowRandCoogps, Ab, Omb,Vgps, CooGps, V0);
 		
-		/*
+	
+		/*Далее идет 100 Гц такт*/
+		for (int iii=0; iii<3; iii++)
+			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
+		/*Решение задачи навигации*/
+		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, H0, V0, kcor1, filter.x, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
+		//Решение задачи ориентации
+		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h,cur_time, derectNorm, kcor2, filter.x, allowCorr); //из одноименного заголовочного файла
+
+			/*
 		По идее, куда-то сюда можно засунуть оценивание по Калману скоростей дрейфов гироскопов
 		*/
 	#if 1
@@ -790,32 +961,32 @@ int main(int argc, char *argv[])
 		// как было до этого
 		int pow_h = 1;
 		//Phi_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
 		//Phi_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
 		#if 1
 		//Phi_z
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
 		#endif
 		//Delta_V_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_a_z
 		//Delta_V_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 2), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_a_z
 		#if 1
 		//Delta_V_z
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 1), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_a_z
 		#endif
 	#endif
 #if 0
@@ -825,7 +996,7 @@ int main(int argc, char *argv[])
 #endif 
 		if (!filter.init) //Если ранее не было инициализации, то инициализируем
 		{
-			filter.Init(x0, q, r, H);
+			filter.Init(x0, q);
 			#if 0
 			filter.Papr[index_3(filter.getDimX(), 0, 0)] = pow(0.2*sqrt(freq), 2);
 			filter.Papr[index_3(filter.getDimX(), 1, 1)] = pow(0.2*sqrt(freq), 2);
@@ -842,8 +1013,8 @@ int main(int argc, char *argv[])
 		#endif
 			for (int iii=3; iii<filter.getDimZ(); ++iii)
 				ErrVins[iii] = V[iii - 3] - Vgps[iii - 3]; //разница ошибок скоростей ИНС и СНС
-			filter.Predict();
-			filter.Update(ErrVins);
+			
+			filter.Predict(); // только экстраполяция, коррекция будет потом (на каждый такт решения ГНСС)
 		#if 0
 			printf("v:\n");
 			filter.Print2dMatr(filter.v, filter.getDimZ(), 1);
@@ -862,17 +1033,82 @@ int main(int argc, char *argv[])
 		#endif
 		}
 	#endif
-	/*Далее идет 100 Гц такт*/
-		for (int iii=0; iii<3; iii++)
-			Wp[iii] = Ab[iii]*h; //вычисляем малые приращения скорости вместо метода Рунге-Кутты, таим вот кустарным способом)
-		/*Решение задачи навигации*/
-		SolveNav(Wp, Ab, Cbn, Wo, Ao, V,  Coordinates, CoordError, Err_V, omo, h, Rphi, Rlambda, U, R, e, H0, V0, kcor1, filter.x, allowCorr); //Err_V уже в этой функции вычисляется, поэтому я могу это значение использовать для коррекции
-		//Решение задачи ориентации
-		SolveOrient(Omb, &Qf, Cbn, Orientation, Coordinates, Omo, omo, V, phi0, Rphi, Rlambda, freq, h, U, cur_time, derectNorm, kcor2, filter.x, allowCorr); //из одноименного заголовочного файла
-	
-		if (!(cur_time % (5*60*100)))
+
+		/*Перевод из географиских координат в XYZ (ECEF, гринвичская)*/
+		// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+		Ldoub XYZ[3] = {0};
+		Ldoub D_sins;
+		Ldoub D[MAX_SAT_USE]={0}; // расстояния между БИНС и i-м спутником
+		BLH_to_XYZ(Coordinates[0], Coordinates[1], Coordinates[2], a, e, XYZ[0], XYZ[1], XYZ[2]);
+		// MulMatrD(XYZ, XYZ, &D_sins, 1,3,1);
+		// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		
+		if (!(cur_time % int(freq))) // каждую секунду (такт решения ГНСС)
 		{
-			V[2] -= filter.x[5];
+			//Формируем матрицу Якоби (понадобится, чтобы связать приращения координат ECEF с географической)
+			Ldoub Yacobi[9];
+			Yacobi_ECEF_to_Geodedic(CoordError[0], Coordinates[1], Coordinates[2], Yacobi);
+
+			int numOfSats = readFile_IzmGnss(fileGNSS, Izm);
+			
+			if (numOfSats > 0)
+			{
+				Ldoub C_ll_ecef[9]={0}; // матрица перехода из географической системы координат в экваториальную
+				Matr_ECEF_Geodedic(Coordinates[0], Coordinates[1], C_ll_ecef);
+				Ldoub VXYZ[3] = {0}; //скорость БИНС в проекциях на оси экваториальной системы координат
+				MulMatrD(C_ll_ecef, V, VXYZ, 3,3,1);
+				//формируем вектор измерений (2*N, где N -- кол-во спутников < MAX_SAT_USE)
+				for (int i=0; i<numOfSats; i++)
+				{
+					//считаем расстояние между БИНС и спутником
+					D[i] = sqrt(pow((XYZ[0] - Izm[i*PARAMETERS_PER_SAT + 2]),2) + pow((XYZ[1] - Izm[i*PARAMETERS_PER_SAT + 3]),2) + pow((XYZ[2] - Izm[i*PARAMETERS_PER_SAT + 4]),2));
+					//формируем вектор невязки
+					ErrVins[i] = Izm[i*PARAMETERS_PER_SAT + 0] - (D[i] + filter.x[15/*umshv*/]); //координаты спутника
+					//Для вектора невязки по псевдоскоростям нужны направляющие косинусы
+					Ldoub DC_ECEF[3] = {0}; //Direct Cosine -- направляющие косинусы для i-го спутника
+					Ldoub V_relative (0); //относительная скорость (БИНС минус спутник на линию визирования)
+					for (int j=0; j<3; j++)
+					{
+						DC_ECEF[j] = (Izm[i*PARAMETERS_PER_SAT + j + 2] - XYZ[j]) / (D[i]);
+						V_relative += DC_ECEF[j] * (VXYZ[j] - Izm[i*PARAMETERS_PER_SAT + j + 2+3]); // считаем относительную скорость (БИНС минус спутник на линию визирования)
+					}
+					//скорости спутника
+					ErrVins[i + MAX_SAT_USE] = Izm[i*PARAMETERS_PER_SAT + 1] - (V_relative + filter.x[16/*f_umshv*/]); //скорости спутника
+
+					//Формируем матрицу измерений (с учетом направляющих косинусов на спутники (ECEF переведенная в географическую систему координат))
+					Ldoub DC_geo[3] = {0};//напр косинусы в географической системе координат для координат
+					MulMatrD(DC_ECEF, Yacobi, DC_geo, 1,3,3);
+
+					Ldoub DC_geo_speed[3] = {0};//напр косинусы в географической для скоростей
+					MulMatrD(DC_ECEF, C_ll_ecef, DC_geo_speed, 1,3,3);
+
+
+					for (int j=0; j<3; j++)//по направляющим косинусам
+					{
+						filter.H[index_3(dim_state, i, j)] 				= -DC_geo[j]; // по координатам
+						filter.H[index_3(dim_state, (MAX_SAT_USE + i), (j+3))] 	= -DC_geo_speed[j]; //по скоростям
+					}
+					filter.H[index_3(dim_state, i, (dim_state-2))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
+					filter.H[index_3(dim_state, (MAX_SAT_USE + i), (dim_state-1))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
+					// printf("Матрица измерений H на %d-м тактке\n", cur_time);
+					// print2dMatr(filter.H, dim_sense, dim_state);
+				}
+				for (int i=numOfSats; i<MAX_SAT_USE; i++) // заполняем нулями строки там отсутсвующих спутников
+				{
+					for (int j=0; j<dim_state; j++)//по столбцам
+					{
+						filter.H[index_3(dim_state,i,j)] = 0.0;
+						filter.H[index_3(dim_state, (MAX_SAT_USE + i), j)] = 0.0;
+					}
+				}
+				// print2dMatr(filter.H, dim_sense, dim_state);
+				filter.Update(ErrVins);
+			}
+		}
+	
+		if (true || !(cur_time % (5*60*100)))
+		{
+			V[2] =0;//-= filter.x[5];
 			filter.x[5] = 0;
 		}
 		

@@ -10,7 +10,7 @@
 #include <stdio.h>
 #endif
 
-void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* Omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, const Ldoub U, Ldoub R, Ldoub e, Ldoub H0, Ldoub* V0, Ldoub k1, alglib::real_1d_array ErrVins, bool allowCorr)
+void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, Ldoub* Coordinates, Ldoub* CoordError, Ldoub* Err_V, Ldoub* Omo/*Переносная скорость */, Ldoub h, Ldoub& Rphi, Ldoub& Rlambda, Ldoub H0, Ldoub* V0, Ldoub k1, alglib::real_1d_array ErrVins, bool allowCorr)
 {
     MulMatrD(Cbn, Wp, Wo, 3, 3, 1); // перепроектирование из связаных осей в навигационные. Здесь Wo -- уже не ускорения, а приращение скоростей
 
@@ -77,7 +77,9 @@ void SolveNav(Ldoub* Wp, Ldoub* Ab, Ldoub* Cbn, Ldoub* Wo, Ldoub* Ao, Ldoub* V, 
     }
 
 
-	Rlambda = R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
-	Rphi = R*(1. - pow(e,2))/(sqrt(1. - pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
+	Rphi = pow(a,2) / sqrt(pow(a,2) * pow(cos(Coordinates[0]),2) + pow(b,2) * pow(sin(Coordinates[0]),2));
+	Rlambda = (pow(a,2) / sqrt(pow(a,2) * pow(sin(Coordinates[0]),2) + pow(b,2) * pow(cos(Coordinates[0]),2))) * pow(cos(Coordinates[0]),2);
+	// Rlambda = R/sqrt(1.-pow(e,2)*pow(sin(Coordinates[0]),2) );
+	// Rphi = R*(1. - pow(e,2))/(sqrt(1. - pow(e,2)*pow(sin(Coordinates[0]),2) ) * (1.-pow(e,2)*pow(sin(Coordinates[0]),2)  ) );
 		
 }

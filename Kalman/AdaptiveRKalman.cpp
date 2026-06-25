@@ -104,6 +104,29 @@ void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q, Ldoub* h/*матрица и
 	//Флаг инициализации
 	init=true;
 }
+
+void AdaptiveRKalman::Init(Ldoub* initVal, Ldoub* q)
+{//Инициализация значениями
+
+
+	//Инициализация начальными значениями
+	for (int iii=0; iii<getDimX(); ++iii)
+	{
+		x[iii] = initVal[iii];
+	}
+	for(int iii=0; iii < getDimQ(); ++iii)
+		for(int jjj=0; jjj < getDimQ(); ++jjj)
+			Q[index_3(getDimQ(), iii, jjj)] = q[index_3(getDimQ(), iii, jjj)];
+	
+	for (int iii=0; iii<getDimZ(); ++iii)
+		for(int jjj=0; jjj<getDimX(); ++jjj)
+			H[index_3(dim_x, iii, jjj)] = 0.0;
+
+	iter = 0;
+	//Флаг инициализации
+	init=true;
+}
+
 void AdaptiveRKalman::Predict()
 {
 	matMul(getDimX(), getDimX(), getDimX(), A, A, A2);
