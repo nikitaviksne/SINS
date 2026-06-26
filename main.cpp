@@ -961,32 +961,32 @@ int main(int argc, char *argv[])
 		// как было до этого
 		int pow_h = 1;
 		//Phi_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 9), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 9), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 9), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_omega_z
 		//Phi_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 8), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_omega_z
 		#if 1
 		//Phi_z
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 6), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 6))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_omega_x
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 5))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_omega_y
+		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 7), (filter.getDimQ() - 4))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_omega_z
 		#endif
 		//Delta_V_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_a_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_a_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 5), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_a_z
+		filter.G[index_3(filter.getDimQ(), 3/*(filter.getDimX() - 12)*/, (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 0, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), 3/*(filter.getDimX() - 12)*/, (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 0, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), 3/*(filter.getDimX() - 12)*/, (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 0, 2)]) * pow(h, pow_h);//d_a_z
 		//Delta_V_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_a_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_a_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 4), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_a_z
+		filter.G[index_3(filter.getDimQ(), 4/*(filter.getDimX() - 11)*/, (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 1, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), 4/*(filter.getDimX() - 11)*/, (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 1, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), 4/*(filter.getDimX() - 11)*/, (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 1, 2)]) * pow(h, pow_h);//d_a_z
 		#if 1
 		//Delta_V_z
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_a_x
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_a_y
-		filter.G[index_3(filter.getDimQ(), (filter.getDimX() - 3), (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_a_z
+		filter.G[index_3(filter.getDimQ(), 5/*(filter.getDimX() - 10)*/, (filter.getDimQ() - 3))] = (Ldoub) (-Cbn[index_3(3, 2, 0)]) * pow(h, pow_h);//d_a_x
+		filter.G[index_3(filter.getDimQ(), 5/*(filter.getDimX() - 10)*/, (filter.getDimQ() - 2))] = (Ldoub) (-Cbn[index_3(3, 2, 1)]) * pow(h, pow_h);//d_a_y
+		filter.G[index_3(filter.getDimQ(), 5/*(filter.getDimX() - 10)*/, (filter.getDimQ() - 1))] = (Ldoub) (-Cbn[index_3(3, 2, 2)]) * pow(h, pow_h);//d_a_z
 		#endif
 	#endif
 #if 0
@@ -1085,7 +1085,7 @@ int main(int argc, char *argv[])
 
 					for (int j=0; j<3; j++)//по направляющим косинусам
 					{
-						filter.H[index_3(dim_state, i, j)] 				= -DC_geo[j]; // по координатам
+						filter.H[index_3(dim_state, i, j)]						= -DC_geo[j]; // по координатам
 						filter.H[index_3(dim_state, (MAX_SAT_USE + i), (j+3))] 	= -DC_geo_speed[j]; //по скоростям
 					}
 					filter.H[index_3(dim_state, i, (dim_state-2))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
