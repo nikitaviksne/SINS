@@ -8,13 +8,15 @@
 
 class AdaptiveRKalman
 {
+private:
+	void Predict(); // функция предсказания по модели
 public:
 	AdaptiveRKalman(int, int, int, Ldoub h = 1/*такт в секундах, по умолчанию*/);
 	void Init(Ldoub* initVal, Ldoub* q, Ldoub* h/*матрица измерений*/);
 	void Init(Ldoub* initVal, Ldoub* q, Ldoub* r, Ldoub* h/*матрица измерений*/); // для согласования с обычновенным Ф.К. 
 	//без матрицы измерений
 	void Init(Ldoub* initVal, Ldoub* q);
-	void Predict(); // функция предсказания по модели
+	void Extrapolate(bool onlyextrapolate=false); //функция, которая переприсваивает эстраполированные значения вектору состояния (необходимо, когда идет только предсказание, чтобы не терялись предсказанные значения)
 	void Update(Ldoub* );// функция обновления, т.е. вычисление оценки вектора по измерениям
 
 	alglib::real_1d_array Phi;

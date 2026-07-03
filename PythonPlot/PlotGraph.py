@@ -475,6 +475,37 @@ if args.SaveDir:
     fig40_path = os.path.join(args.SaveDir, "Оценки_дрейфов_акселерометров")
     saveFigure(fig40, fig40_path, format_type='pdf' if not args.PGF else "pgf")
 
+fig50, (fig50_ax1, fig50_ax2) = plt.subplots(nrows = 1, ncols = 2, 
+                                                    figsize=set_size(width, fraction=0.9),
+                                                    constrained_layout=True, # Более продвинутый алгоритм распределения места
+                                                    # sharey='row',
+                                                    )
+# УМШВ
+fig50.suptitle("Оценка параметров приемника")
+fig50_ax1.set_title("Оценка ухода\nместной шкалы времени")
+fig50_ax1.set_xlabel("Мин")
+fig50_ax1.set_ylabel("м")
+# fig50_ax1.set_ylim(-1e-4, 1e-2)
+fig50_ax1.plot(time, np.round(estimations["tau"], round), label="$\tau$");
+fig50.set_size_inches(set_size(width))
+# fig50_ax1.plot(time, np.round(np.rad2deg(mean[0]), round)*3600, label="$E(\omega_x^F)$");
+# fig50_ax1.plot(time, np.round(np.rad2deg(flf[0]), round)*3600, label="$\omega_x^F$", alpha = 0.5, linestyle = "--", marker = "*");
+fig50_ax1.grid(True)
+fig50_ax1.legend(loc="lower center")
+#скорость УМШВ
+fig50_ax2.set_title("Оценка скорости\nухода местной шкалы\nвремени Y")
+fig50_ax2.set_xlabel("Мин")
+# fig50_ax2.set_ylabel("Град/час")
+# fig50_ax2.set_ylim(-0.25, 0.25)
+fig50_ax2.plot(time, np.round(estimations["dot_tau"]), round, label="$\dot{\tau} $");
+# fig50_ax2.plot(time, np.round(np.rad2deg(mean[1]), round)*3600, label="$E(\omega_y^F)$");
+# fig50_ax2.plot(time, np.round(np.rad2deg(flf[1]), round)*3600, label="$\omega_y^F$", alpha = 0.5, linestyle = "--", marker = "*");
+fig50_ax2.grid(True)
+fig50_ax2.legend(loc="lower center",)
+if args.SaveDir:
+    fig50_path = os.path.join(args.SaveDir, "Оценки_параметров_приемника")
+    saveFigure(fig50, fig50_path, format_type='pdf' if not args.PGF else "pgf")
+
 plt.show()
 
 exit();

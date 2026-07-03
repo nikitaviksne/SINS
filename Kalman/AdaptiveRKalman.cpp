@@ -133,7 +133,22 @@ void AdaptiveRKalman::Predict()
 	matMul(getDimX(), getDimX(), getDimX(), A2, A, A3);
 	for (int iii =0; iii < getDimX()*getDimX(); ++iii) //вычисляю матрицу перехода Phi
 		Phi[iii] = I[iii] + A[iii] * h + A2[iii] * pow(h,2) / 2. + A3[iii] * pow(h, 3) / 6.; //не забываем умножить на такт интегрирования
+
+#if 0
+	printf("Матрица Phi\n");
+	Print2dMatr(Phi, getDimX(), getDimX());
+#endif
+#if 0
+	printf("Матрица X\n");
+	Print2dMatr(x, getDimX(), 1);
+#endif
+
 	matMul(getDimX(), getDimX(), 1, Phi, x, x_1); //предсказываем вектор состояния x_1  = Phi @ x
+
+#if 0
+	printf("Матрица X1\n");
+	Print2dMatr(x_1, getDimX(), 1);
+#endif
 
 	/*предсказываем априорную ошибку оценивания (используя апостериорную и ковариацию входного шума)*/
 
@@ -183,6 +198,24 @@ void AdaptiveRKalman::Predict()
 
 	for (int iii=0; iii<getDimX()*getDimX(); ++iii)
 		Papr[iii] = Phi_Papst_Phi_t[iii] + GQGt[iii];
+
+}
+
+void AdaptiveRKalman::Extrapolate(bool onlyextrapolate)
+{
+	Predict();
+	if (onlyextrapolate)
+	{
+		for (int i=0; i< getDimX(); i++)
+		{
+			x[i] = x_1[i]; // считаем, что вектор состояния это вектор предсказанный по моделе
+			for(int j=0; j < getDimX(); j++)
+			{
+				Papst[index_3(getDimX(),i,j)] = Papr[index_3(getDimX(),i,j)]; //значение апостериорной ошибки это априорная ошибка (другой нет)
+			}
+		}
+	}
+
 
 }
 
@@ -389,7 +422,7 @@ void AdaptiveRKalman::Print2dMatr(alglib::real_1d_array A, int dim1, int dim2)//
 {
 	for (int iii=0; iii<dim1; ++iii)
 	{
-		for (int jjj=0; jjj<dim2; ++jjj) printf("%e ", A[index_3(dim2, iii, jjj)]);
+		for (int jjj=0; jjj<dim2; ++jjj) printf("%e, ", A[index_3(dim2, iii, jjj)]);
 		printf("\n");
 	}
 }
