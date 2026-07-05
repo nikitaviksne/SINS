@@ -1156,8 +1156,8 @@ int main(int argc, char *argv[])
 			filter.Papr[index_3(filter.getDimX(), filter.getDimX()-1, filter.getDimX()-1)] = pow(1e-2,2); //dot tau
 			#endif
 			//gnss
-			filter.Papr[index_3(filter.getDimX(), filter.getDimX()-2, filter.getDimX()-2)] = 10;//filter.Q[index_3(filter.getDimQ(), (filter.getDimQ() - 2), (filter.getDimQ() - 2))]; //tau
-			filter.Papr[index_3(filter.getDimX(), filter.getDimX()-1, filter.getDimX()-1)] = 10;//filter.Q[index_3(filter.getDimQ(), (filter.getDimQ() - 1), (filter.getDimQ() - 1))]; //dot tau
+			filter.Papr[index_3(filter.getDimX(), filter.getDimX()-2, filter.getDimX()-2)] = 0;//filter.Q[index_3(filter.getDimQ(), (filter.getDimQ() - 2), (filter.getDimQ() - 2))]; //tau
+			filter.Papr[index_3(filter.getDimX(), filter.getDimX()-1, filter.getDimX()-1)] = 0;//filter.Q[index_3(filter.getDimQ(), (filter.getDimQ() - 1), (filter.getDimQ() - 1))]; //dot tau
 			#endif
 		}
 		else//в противном случае оцениваем
@@ -1200,9 +1200,9 @@ int main(int argc, char *argv[])
 		for (int i=0; i<3; i++) fprintf(xyz, "%.10Lf;%.10Lf;%.10Lf;\n",XYZ[0], XYZ[1], XYZ[2]);
 		#endif
 
-		XYZ[0] = 2797600.;
-		XYZ[1] = 2115825.;
-		XYZ[2] = 5309347.;
+		// XYZ[0] = 2'797'600.129;
+		// XYZ[1] = 2'115'824.843;
+		// XYZ[2] = 5'309'346.947;
 		// XYZ[3] = filter.x[15]; 
 	
 		// MulMatrD(XYZ, XYZ, &D_sins, 1,3,1);
@@ -1261,11 +1261,11 @@ int main(int argc, char *argv[])
 
 					for (int j=0; j<3; j++)//по направляющим косинусам
 					{
-						filter.H[index_3(dim_state, i, j)]						= -DC_geo[j]; // по координатам
-						filter.H[index_3(dim_state, (MAX_SAT_USE + i), (j+3))] 	= -DC_geo_speed[j]; //по скоростям
+						filter.H[index_3(dim_state, i, j)]										= -1*DC_geo[j]; // по координатам
+						filter.H[index_3(dim_state, (i), (3 + j))] 								= -1*DC_geo_speed[j]; //по скоростям
 					}
-					filter.H[index_3(dim_state, i, (dim_state-2))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
-					filter.H[index_3(dim_state, (MAX_SAT_USE + i), (dim_state-1))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
+					filter.H[index_3(dim_state, i, (dim_state - 2))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
+					filter.H[index_3(dim_state, (i), (dim_state - 1))] = 1;//потому что dim_sate-1 это последний элемент (это f_umshv), а предпоследний (dim_state-2) это будет umshv 
 					// printf("Матрица измерений H на %d-м тактке\n", cur_time);
 					// print2dMatr(filter.H, dim_sense, dim_state);
 				}
@@ -1274,7 +1274,6 @@ int main(int argc, char *argv[])
 					for (int j=0; j<dim_state; j++)//по столбцам
 					{
 						filter.H[index_3(dim_state,i,j)] = 0.0;
-						filter.H[index_3(dim_state, (MAX_SAT_USE + i), j)] = 0.0;
 					}
 				}
 				// print2dMatr(filter.H, dim_sense, dim_state);
